@@ -2,7 +2,7 @@
 
 ## Background
 
-The project uses a simple radio system to measure waves in the upper atmopshere (ionosphere) above Svalbard. The simplest configuration uses one transmitter and one receiver that are in different locations with an optimal distance being roughly 100km. The transmitter sends a constant carrier wave at a fixed frequency. The wave is reflected back from the ionosphere to the receiver. Plasma motions in the ionosphere cause small shifts in the frequency of the reflected wave. Comparisons of the received frequency, or frequencies, to the known transmit frequency can be used to study plasma motion and waves in the upper atmosphere.
+The experiment uses a simple radio system to measure waves in the upper atmopshere (ionosphere) above Svalbard. The simplest configuration uses one transmitter and one receiver that are in different locations with an optimal distance being roughly 100km. The transmitter sends a constant carrier wave at a fixed frequency. The wave is reflected back from the ionosphere to the receiver. Plasma motions in the ionosphere cause small shifts in the frequency of the reflected wave. Comparisons of the received frequency, or frequencies, to the known transmit frequency can be used to study plasma motion and waves in the upper atmosphere.
 
 ## Technical description
 
