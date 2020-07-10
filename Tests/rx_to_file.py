@@ -2,9 +2,17 @@ import uhd
 import numpy as np
 import argparse
 
+# A simple script based on the examples in the python API.
+#
+# The data are saved as a NumPy datafile. The USRP parameter defaults
+# are the ones that will likely be used for receiving the CW transmissions
+# from Hornsund at 4.45MHz. Furthermore, there is no need to use a very high
+# sample frequency, so the smallest sample frequency possible for USRP N200
+# is used.
+
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="RX from USRP to file")
     parser.add_argument("-a", "--args", default="", type=str)
     parser.add_argument("-o", "--output-file", type=str, required=True)
     parser.add_argument("-f", "--freq", default=4.45e6, type=float)

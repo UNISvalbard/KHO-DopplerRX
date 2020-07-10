@@ -44,9 +44,10 @@ sudo apt install wget python3-pip git
 sudo apt-get install libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils cmake build-essential
 python3 -m pip install --user numpy scipy matplotlib ipython jupyter pandas sympy nose
 ```
-Compile the source
+Compile the source, note that you should choose the LTS branch, the latest version froze when trying to record from the USRP
 ```
 git clone https://github.com/EttusResearch/uhd.git
+git checkout UHD-3.15.LTS
 cd uhd/host
 mkdir build
 cd build
@@ -59,4 +60,22 @@ sudo ldconfig
 The python API will be installed in a directory that needs to be added to the path. The simplest way is to add the following in `.bashrc`
 ```
 export PYTHONPATH="/usr/local/lib/python3/dist-packages/"
+```
+
+## Additional configuration for USRP
+
+Increase buffer size by adding the following to `/etc/sysctl.conf`
+```
+net.core.rmem_max=50000000
+net.core.wmem_max=50000000
+```
+Set thread priority, see https://files.ettus.com/manual/page_general.html#general_threading
+
+```
+sudo addgroup usrp
+sudo adduser myuser usrp
+```
+Add the following line to `/etc/security/limits.conf`
+```
+@usrp  - rtprio 99
 ```
