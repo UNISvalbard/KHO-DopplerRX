@@ -13,7 +13,7 @@ The basic setup procedure is to first prepare a linux machine and then compile a
 For installing the VirtualBox Guest Additions, you will need more software
 ```
 sudo apt update
-sudo apt install install gcc make perl
+sudo apt install gcc make perl
 ```
 
 6. Install the guest additions (VirtualBox menu "Devices")
