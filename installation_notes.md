@@ -20,7 +20,7 @@ sudo apt install gcc make perl
 7. Eject the guest additions virtual DVD
 8. Reboot the linux
 9. Choose a larger virtual screen for the linux (VirtualBox menu "View")
-10. In the VirtualBox settings for the virtual machine, change the default mouse handling to allow copying of text between the host and the VM (Settings-General-Advanced-Shared Clipboard-Birectional)
+10. In the VirtualBox settings for the virtual machine, change the default mouse handling to allow copying of text between the host and the VM (Settings-General-Advanced-Shared Clipboard-Birectional). You will need to restart the virtual machine for the changes to take effect
 
 ## Personal preferences for the Ubuntu configuration
 
@@ -44,11 +44,12 @@ sudo apt install wget python3-pip git
 sudo apt-get install libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils cmake build-essential
 python3 -m pip install --user numpy scipy matplotlib ipython jupyter pandas sympy nose
 ```
-Compile the source, note that you should choose the LTS branch, the latest version froze when trying to record from the USRP
+Compile the source, note that you should choose the LTS branch, the latest version froze when trying to record from the USRP (in VirtualBox)
 ```
 git clone https://github.com/EttusResearch/uhd.git
+cd uhd
 git checkout UHD-3.15.LTS
-cd uhd/host
+cd host
 mkdir build
 cd build
 cmake -DENABLE_PYTHON_API=ON ../
