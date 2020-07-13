@@ -42,7 +42,7 @@ Installing from source requires some additional packages. Also, the actual Doppl
 ```
 sudo apt install wget python3-pip git
 sudo apt-get install libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils cmake build-essential
-python3 -m pip install --user numpy scipy matplotlib ipython jupyter pandas sympy nose
+python3 -m pip install --user numpy scipy matplotlib ipython jupyter pandas sympy nose h5py
 ```
 Compile the source, note that you should choose the LTS branch, the latest version froze when trying to record from the USRP (in VirtualBox)
 ```
