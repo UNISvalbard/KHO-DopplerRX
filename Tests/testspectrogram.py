@@ -6,6 +6,9 @@
 # The data is imported as a NumPy datafile. When using the spectrogram
 # function, one should note that it returns a matrix that has "too many"
 # dimensions, which produces an error with pcolormesh if not taken care of.
+"""
+Plot a spectrogram of data captured with rx_to_file.py
+"""
 
 import scipy.signal as ss
 from numpy.fft import fftshift
@@ -15,6 +18,7 @@ import argparse
 
 
 def plot_spectrogram(x, fs):
+    """Given a complex signal, plot its two-sided spectrogram"""
     f, t, Sxx = ss.spectrogram(x, fs, return_onesided=False)
     Syy = 10*np.log10(Sxx.squeeze())
     plt.pcolormesh(t, fftshift(f), fftshift(Syy, axes=0))
