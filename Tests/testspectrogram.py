@@ -37,16 +37,25 @@ def parse_args():
                         action="store_true")
     parser.add_argument("-i", "--input-file", type=str,
                         required=True, help="Input file (NumPy data)")
+    parser.add_argument("-r", "--rate", default=250e3, type=float)
+    parser.add_argument("-d", "--decimate", type=int, default=0,
+                        help="Decimate rate (default no decimation)")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     # print(args)
+    q = args.decimate
 
     x = np.load(args.input_file)
-    fs = 250e3
-    plot_spectrogram(x, fs)
+    fs = args.rate
+    if q > 0:
+        xx = ss.decimate(x, q)
+        fs2 = fs//q
+        plot_spectrogram(xx, fs2)
+    else:
+        plot_spectrogram(x, fs)
 
 
 if __name__ == "__main__":
