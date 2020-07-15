@@ -4,8 +4,6 @@
 Testing of UHD streaming straight to disk
 
 TODO
-- probably a good idea to use threading for the background tasks
-  such as saving new data to file
 - one file each second may be good for testing, but the data file
   should be e.g. one file for each minute (or for each hour). This should
   definitely be run in a separate thread...
@@ -17,8 +15,8 @@ import numpy as np
 import uhd
 import scipy.signal as ss
 from datetime import datetime
-# import time
 import logging
+import threading
 
 
 def parse_args():
@@ -30,21 +28,27 @@ def parse_args():
     parser.add_argument("-g", "--gain", type=int, default=10)
     parser.add_argument("-c", "--channel", type=int, default=0)
     parser.add_argument("-d", "--duration", type=int, default=1)
-    # parser.add_argument("-N", "--nfft", type=int, default=256)
+    parser.add_argument("-v", "--verbose", action="store_true")
     return parser.parse_args()
 
 
-def decimate_to_file(mydt, samples, fs, filename):
+def decimate_to_file(mydt, samples, fs):
     """Reduce the sample rate before saving to file"""
     x1 = ss.decimate(samples, 50)
     x2 = ss.decimate(x1, 50)
     fs_new = (fs//50)//50
-    logging.debug(str(x2.shape)+" "+str(fs_new) + " " + filename)
+    filename = "/dev/shm/doppler"+mydt.strftime("%Y-%m-%dT%H:%M:%S")
+    logging.info(str(x2.shape)+" "+str(fs_new) + " " + filename)
     np.savez(filename, timestamp=mydt.timestamp(), fs=fs_new, samples=x2)
 
 
 def main():
     args = parse_args()
+
+    logging.basicConfig(level=logging.INFO)
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
     usrp = uhd.usrp.MultiUSRP(args.args)
 
     # Set the USRP rate, freq, and gain
@@ -88,9 +92,9 @@ def main():
                             real_samps] = recv_buffer[:, 0:real_samps]
                     recv_samps += real_samps
             print("...done")
-            filename = "/dev/shm/doppler"+mydt.strftime("%Y-%m-%dT%H:%M:%S")
-            # print(filename,recv_samps)
-            decimate_to_file(mydt, samples, args.rate, filename)
+            x = threading.Thread(target=decimate_to_file,
+                                 args=(mydt, samples, args.rate))
+            x.start()
 
     except KeyboardInterrupt:
         pass
@@ -100,5 +104,4 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     main()
