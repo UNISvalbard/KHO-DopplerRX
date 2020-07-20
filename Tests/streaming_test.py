@@ -4,9 +4,10 @@
 Testing of UHD streaming straight to disk
 
 TODO
-- one file each second may be good for testing, but the data file
-  should be e.g. one file for each minute (or for each hour). This should
-  definitely be run in a separate thread...
+- there are occasionaly drops between individual record files. This may
+  be due to tests running in a virtual machine. But do we need a realtime-OS
+  to guarantee all samples will be capturered? Or does it matter in practice
+  as long as the time for each sample is known (which it is)?
 - error handling completely missing as of now :-)
 """
 
@@ -15,6 +16,7 @@ import numpy as np
 import uhd
 import scipy.signal as ss
 from datetime import datetime
+import time
 import logging
 import threading
 
@@ -23,23 +25,40 @@ def parse_args():
     """Parse the command line arguments"""
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--args", default="", type=str)
-    parser.add_argument("-f", "--freq", type=float, default=4.45e6)
-    parser.add_argument("-r", "--rate", default=250e3, type=float)
+    parser.add_argument("-f", "--freq", type=float, default=4.45e6,
+                        help="Tuning frequency in Hz (default 4.45MHz)")
+    parser.add_argument("-r", "--rate", default=250e3, type=float,
+                        help="Sample rate in Hz (default 250kHz)")
     parser.add_argument("-g", "--gain", type=int, default=10)
     parser.add_argument("-c", "--channel", type=int, default=0)
-    parser.add_argument("-d", "--duration", type=int, default=1)
+    parser.add_argument("-d", "--duration", type=int, default=1,
+                        help="Duration for individual record files (s)")
     parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("--fs500", action="store_true",
+                        help="Decimate to 500Hz sampling instead of 100Hz")
     return parser.parse_args()
 
 
-def decimate_to_file(mydt, samples, fs):
+def decimate_100Hz_to_file(mytime, samples, fs):
     """Reduce the sample rate before saving to file"""
     x1 = ss.decimate(samples, 50)
     x2 = ss.decimate(x1, 50)
     fs_new = (fs//50)//50
+    mydt = datetime.utcfromtimestamp(mytime)
     filename = "/dev/shm/doppler"+mydt.strftime("%Y-%m-%dT%H:%M:%S")
-    logging.info(str(x2.shape)+" "+str(fs_new) + " " + filename)
-    np.savez(filename, timestamp=mydt.timestamp(), fs=fs_new, samples=x2)
+    logging.info("Fs=" + str(fs_new) + "Hz " + filename)
+    np.savez(filename, timestamp=mytime, fs=fs_new, samples=x2)
+
+
+def decimate_500Hz_to_file(mytime, samples, fs):
+    """Reduce the sample rate before saving to file"""
+    x1 = ss.decimate(samples, 50)
+    x2 = ss.decimate(x1, 10)
+    fs_new = (fs//50)//10
+    mydt = datetime.utcfromtimestamp(mytime)
+    filename = "/dev/shm/doppler"+mydt.strftime("%Y-%m-%dT%H:%M:%S")
+    logging.info("Fs=" + str(fs_new) + "Hz " + filename)
+    np.savez(filename, timestamp=mytime, fs=fs_new, samples=x2)
 
 
 def main():
@@ -78,7 +97,8 @@ def main():
             # Receive the samples into the receive buffer
             # and copy to the actual sample buffer when available
             logging.info("Receiving new buffer...")
-            mydt = datetime.now()
+            mytime = time.time()    # Always start from UTC time!
+            mydt = datetime.utcfromtimestamp(mytime)
             logging.info(mydt.strftime("%Y-%m-%d %H:%M:%S"))
             recv_samps = 0
             while recv_samps < num_samps:
@@ -91,9 +111,13 @@ def main():
                     samples[:, recv_samps:recv_samps +
                             real_samps] = recv_buffer[:, 0:real_samps]
                     recv_samps += real_samps
-            print("...done")
-            x = threading.Thread(target=decimate_to_file,
-                                 args=(mydt, samples, args.rate))
+            logging.info("...done")
+            if args.fs500:
+                x = threading.Thread(target=decimate_500Hz_to_file,
+                                     args=(mytime, samples, args.rate))
+            else:
+                x = threading.Thread(target=decimate_100Hz_to_file,
+                                     args=(mytime, samples, args.rate))
             x.start()
 
     except KeyboardInterrupt:

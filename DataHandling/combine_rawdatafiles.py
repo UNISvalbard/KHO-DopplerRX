@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument("-n", "--dry-run", action="store_true")
     parser.add_argument("-d", "--delete-files", action="store_true")
     parser.add_argument("-i", "--input-directory", required=True)
-    parser.add_argument("-o", "--output-directory", default="/dev/shm")
+    parser.add_argument("-o", "--output-directory", default="/dev/shm/Doppler")
     return parser.parse_args()
 
 # The following code uses a shortcut, where we assume that
@@ -62,8 +62,8 @@ def save_to_hour_file(path, filename, tindex, samples):
 def savecheck(path, filename, tindex, samples):
     """ For checking that the indices go right... """
     print("Would be saving to", os.path.join(path, filename))
-    tsmin = dt.datetime.fromtimestamp(np.min(tindex))
-    tsmax = dt.datetime.fromtimestamp(np.max(tindex))
+    tsmin = dt.datetime.utcfromtimestamp(np.min(tindex))
+    tsmax = dt.datetime.utcfromtimestamp(np.max(tindex))
     print("with a range from", tsmin, "to", tsmax)
 
 # ------------------------------------------------------------------
@@ -93,8 +93,8 @@ def main():
         # hour-file or some part of it will need to written to the following
         # hour-file
         tindex = ts+np.arange(0, samples.size)*delta
-        mintime = dt.datetime.fromtimestamp(np.min(tindex))
-        maxtime = dt.datetime.fromtimestamp(np.max(tindex))
+        mintime = dt.datetime.utcfromtimestamp(np.min(tindex))
+        maxtime = dt.datetime.utcfromtimestamp(np.max(tindex))
 
         filename = mintime.strftime("doppler_lyr_%Y%m%d_%HUT.npz")
         filename_ext = maxtime.strftime("doppler_lyr_%Y%m%d_%HUT.npz")
@@ -111,12 +111,13 @@ def main():
             else:
                 save_to_hour_file(path, filename, tindex, samples)
         else:
-            firsthour = dt.datetime.fromtimestamp(tindex[0]).hour
-            secondhour = dt.datetime.fromtimestamp(tindex[1]).hour
+            """ First, find the index where the hour changes"""
+            firsthour = dt.datetime.utcfromtimestamp(tindex[0]).hour
+            secondhour = dt.datetime.utcfromtimestamp(tindex[1]).hour
             j = 1
             while firsthour == secondhour:
                 j = j+1
-                secondhour = dt.datetime.fromtimestamp(tindex[j]).hour
+                secondhour = dt.datetime.utcfromtimestamp(tindex[j]).hour
             firsthour_end = j-1
             secondhour_start = j
             if args.dry_run:
