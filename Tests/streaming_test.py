@@ -47,7 +47,7 @@ def decimate_100Hz_to_file(mytime, samples, fs):
     mydt = datetime.utcfromtimestamp(mytime)
     filename = "/dev/shm/doppler"+mydt.strftime("%Y-%m-%dT%H:%M:%S")
     logging.info("Fs=" + str(fs_new) + "Hz " + filename)
-    np.savez(filename, timestamp=mytime, fs=fs_new, samples=x2)
+    np.savez(filename, timestamp=mytime, fs=fs_new, samples=x2.flatten())
 
 
 def decimate_500Hz_to_file(mytime, samples, fs):
