@@ -25,8 +25,8 @@ def parse_args():
     #                    default="/dev/shm/Doppler")
     parser.add_argument("-i", "--input-file",
                         default="/home/mikko/hdftests/tst.npz")
-    parser.add_argument("-o", "--output-directory",
-                        default="/home/mikko/hdftests")
+    #parser.add_argument("-o", "--output-directory",
+    #                    default="/home/mikko/hdftests")
 
     return parser.parse_args()
 
@@ -49,7 +49,11 @@ def savetoHDF5(filename):
     print("Timestamps:", ts.shape)
     print("   IQ data:", iqdata.shape)
 
-    with h5py.File("/home/mikko/hdftests/testfile.hdf5", "w") as f:
+    # Save the data into an HDF5-file in the source directory
+    pre,_ = os.path.splitext(filename)
+    hdffilename = pre + ".hdf5"
+    
+    with h5py.File(hdffilename, "w") as f:
         dset = f.create_dataset("timestamps", data=ts, compression="gzip")
         dset.attrs["Description"] = np.string_(
             "UNIX Time Stamp for each sample")
@@ -63,7 +67,7 @@ def savetoHDF5(filename):
         dset.attrs["Location"] = np.string_("Kjell Henriksen Observatory")
         dset.attrs["Receiver"] = np.string_("78.14798N 16.04235E")
         dset.attrs["Transmitter"] = np.string_("77.00145N 15.54021E")
-
+        dset.attrs["Frequency"] = np.string_("4450000")
 
 def main():
     """ Process all individual datafiles into one-hour-files"""
