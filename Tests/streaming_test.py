@@ -70,6 +70,10 @@ def main():
 
     usrp = uhd.usrp.MultiUSRP(args.args)
 
+    # Use 10MHz reference and PPS signals from an external GPS
+    usrp.set_clock_source("external")
+    usrp.set_time_source("external")
+
     # Set the USRP rate, freq, and gain
     usrp.set_rx_rate(args.rate, args.channel)
     usrp.set_rx_freq(uhd.types.TuneRequest(args.freq), args.channel)
