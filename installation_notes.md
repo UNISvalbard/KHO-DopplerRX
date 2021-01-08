@@ -80,3 +80,12 @@ Add the following line to `/etc/security/limits.conf`
 ```
 @usrp  - rtprio 99
 ```
+
+## Add vector optimised libraries for speeding up (TBC)
+
+There are comments in the web that installing the volk-libraries often speed up the GNUradio routines.
+```
+sudo apt-get install libvolk1-bin
+volk_profile
+```
+This needs to be tested...
