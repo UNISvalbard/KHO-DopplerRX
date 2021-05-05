@@ -25,13 +25,13 @@ def parse_args():
     """Parse the command line arguments"""
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--args", default="", type=str)
-    parser.add_argument("-f", "--freq", type=float, default=4.45e6,
+    parser.add_argument("-f", "--freq", type=float, default=4.45e6-25,
                         help="Tuning frequency in Hz (default 4.45MHz)")
     parser.add_argument("-r", "--rate", default=250e3, type=float,
                         help="Sample rate in Hz (default 250kHz)")
     parser.add_argument("-g", "--gain", type=int, default=10)
     parser.add_argument("-c", "--channel", type=int, default=0)
-    parser.add_argument("-d", "--duration", type=int, default=1,
+    parser.add_argument("-d", "--duration", type=int, default=60,
                         help="Duration for individual record files (s)")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--fs500", action="store_true",
@@ -74,6 +74,14 @@ def main():
     usrp.set_clock_source("external")
     usrp.set_time_source("external")
 
+    # Add here a routine to wait for the system to lock
+    ref_status=usrp.get_mboard_sensor("ref_locked",0)
+    if ref_status.value:
+        logging.info("Reference clock locked")
+    else:
+        logging.info("** Reference clock not locked?")
+
+
     # Set the USRP rate, freq, and gain
     usrp.set_rx_rate(args.rate, args.channel)
     usrp.set_rx_freq(uhd.types.TuneRequest(args.freq), args.channel)
@@ -96,6 +104,8 @@ def main():
     stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
     stream_cmd.stream_now = True
     streamer.issue_stream_cmd(stream_cmd)
+
+    prev_sample_count = 0
     try:
         while True:
             # Receive the samples into the receive buffer
@@ -107,6 +117,12 @@ def main():
             recv_samps = 0
             while recv_samps < num_samps:
                 samps = streamer.recv(recv_buffer, metadata)
+
+                sample_count = int(metadata.time_spec.get_full_secs())*int(args.rate)+int(metadata.time_spec.get_frac_secs()*args.rate)
+                input_step = sample_count - prev_sample_count
+                if input_step != 363:
+                    print("Dropped packet %d!"%(input_step))
+                prev_sample_count=sample_count
 
                 if metadata.error_code != uhd.types.RXMetadataErrorCode.none:
                     print(metadata.strerror())

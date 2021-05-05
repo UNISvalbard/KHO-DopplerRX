@@ -9,7 +9,7 @@ import numpy as np
 import h5py
 import argparse
 # import glob
-# import os
+import os
 import datetime as dt
 import logging
 # import pathlib
@@ -20,13 +20,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", action="store_true")
     # parser.add_argument("-d", "--delete-files", action="store_true")
-    #    parser.add_argument("-i", "--input-file", required=True)
-    # parser.add_argument("-o", "--output-directory",
-    #                    default="/dev/shm/Doppler")
-    parser.add_argument("-i", "--input-file",
-                        default="/home/mikko/hdftests/tst.npz")
-    #parser.add_argument("-o", "--output-directory",
-    #                    default="/home/mikko/hdftests")
+    parser.add_argument("-i", "--input-file", required=True)
+#    parser.add_argument("-o", "--output-directory",
+#                    default="/dev/shm/Doppler")
+#    parser.add_argument("-i", "--input-file",
+#                        default="/home/mikko/hdftests/tst.npz")
+#    parser.add_argument("-o", "--output-directory",
+#                        default="/home/mikko/hdftests")
 
     return parser.parse_args()
 
@@ -48,10 +48,10 @@ def savetoHDF5(filename):
     print("     stop: ", stoptime)
     print("Timestamps:", ts.shape)
     print("   IQ data:", iqdata.shape)
-
+    
     # Save the data into an HDF5-file in the source directory
-    pre,_ = os.path.splitext(filename)
-    hdffilename = pre + ".hdf5"
+    pre,_=os.path.splitext(filename)
+    hdffilename=pre+".hdf5"
     
     with h5py.File(hdffilename, "w") as f:
         dset = f.create_dataset("timestamps", data=ts, compression="gzip")
@@ -66,8 +66,9 @@ def savetoHDF5(filename):
         dset.attrs["Institute"] = np.string_("University Centre in Svalbard")
         dset.attrs["Location"] = np.string_("Kjell Henriksen Observatory")
         dset.attrs["Receiver"] = np.string_("78.14798N 16.04235E")
+        dset.attrs["RX Frequency"] = np.string_("4450000-25")
         dset.attrs["Transmitter"] = np.string_("77.00145N 15.54021E")
-        dset.attrs["Frequency"] = np.string_("4450000")
+        dset.attrs["TX Frequency"]=np.string_("4450000")
 
 def main():
     """ Process all individual datafiles into one-hour-files"""
