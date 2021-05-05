@@ -65,6 +65,7 @@ def savecheck(path, filename, tindex, samples):
     tsmin = dt.datetime.utcfromtimestamp(np.min(tindex))
     tsmax = dt.datetime.utcfromtimestamp(np.max(tindex))
     print("with a range from", tsmin, "to", tsmax)
+    print(tindex.shape,samples.shape)
 
 # ------------------------------------------------------------------
 
@@ -82,7 +83,7 @@ def main():
     for i in np.arange(0, len(myfiles)):
         print("Processing", myfiles[i])
         thisdata = np.load(myfiles[i])
-        samples = thisdata["samples"]
+        samples = thisdata["samples"].flatten()
         ts = thisdata["timestamp"]
         fs = thisdata["fs"]
         delta = 1/fs

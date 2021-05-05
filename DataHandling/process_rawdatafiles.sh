@@ -19,8 +19,8 @@
 
 RAWFILES="/dev/shm"
 STAGEDIR="/dev/shm/doppler1h"
-DESTDIR="/dev/shm/Doppler"
+DESTDIR="/home/aurora/Data"
 
 mkdir -p $STAGEDIR
 find $RAWFILES -maxdepth 1 -mmin +65 -name '*.npz' -exec mv {} $STAGEDIR \;
-python combine_rawdatafiles.py -i $STAGEDIR -o $DESTDIR -d
+python /home/aurora/bin/combine_rawdatafiles.py -i $STAGEDIR -o $DESTDIR -d
