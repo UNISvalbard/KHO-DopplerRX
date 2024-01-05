@@ -83,7 +83,8 @@ def main(filelist):
         # Store the interpolated data with a slightly modified name
         # into the same directory as the original file
         outpath=os.path.split(filename)[0]
-        newname=os.path.splitext(filename)[0]+'-nogaps.npz'
+        basename=os.path.basename(filename)
+        newname=os.path.splitext(basename)[0]+'-nogaps.npz'
         outfile=os.path.join(outpath,newname)
         print('\t -> ', outfile)
         np.savez(outfile,timestamps=new_ts,iq=new_iq)
