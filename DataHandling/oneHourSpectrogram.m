@@ -19,7 +19,7 @@ fprintf('Data from %s to %s\n',min(dt),max(dt))
 % This is a common trick to avoid the large DC component (at 0Hz)
 % which you'll see if you don't provide any frequency limits...
 
-fs=100;
+fs=1/(timestamps(2)-timestamps(1)); % This should be 100Hz
 
 subplot(1,2,1)
 pspectrum(sampleIQ,fs,'spectrogram')
