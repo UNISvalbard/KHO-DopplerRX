@@ -121,16 +121,14 @@ prideds['longitude_rx'].attrs = {
 }
 
 prideds['samples_I'].attrs = {
-    'standard_name': 'received_power_of_radio_wave_in_air_scattered_by_air',
     'long_name': 'In-phase component of the sample',
-    'units': 'watts',
+    'units': '1',
     'coverage_content_type': 'physicalMeasurement'
 }
 
 prideds['samples_Q'].attrs = {
-    'standard_name': 'received_power_of_radio_wave_in_air_scattered_by_air',
     'long_name': 'Quadrature component of the sample',
-    'units': 'watts',
+    'units': '1',
     'coverage_content_type': 'physicalMeasurement'
 }
 
