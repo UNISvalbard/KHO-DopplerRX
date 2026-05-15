@@ -89,7 +89,8 @@ prideds['time'].attrs = {
     'standard_name':'time',
     'long_name': 'time',
     'units': f'milliseconds since {startdatestr}',
-    'calendar': 'standard'
+    'calendar': 'standard',
+    'coverage_content_type': 'coordinate'
 }
 
 prideds['latitude_tx'].attrs = {
@@ -153,14 +154,15 @@ prideds['rx_frequency'].attrs = {
 
 dtnow = dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-
+# Global attributes based on https://adc.met.no/submit-data-as-netcdf-cf
 prideds.attrs = {
-    'id': '11522',
-    'naming_authority': 'no.researchinsvalbard',
+    'researchinsvalbard_id': '11522',
     'title': 'Polar Research Ionospheric Doppler Experiment',
+    # TODO: The summary could be longer. Like an abstract for a paper, describing the data and processing if applicable.
     'summary': 'Records of received continuous-wave transmissions at a single frequency bounced reflected by the ionosphere',
-    'keywords': 'Earth Science > Sun-Earth interactions > ionosphere-magnetosphere dynamics > plasma waves',
-    'keywords_vocabulary': 'GCMD:GCMD Keywords',
+    'keywords': 'GCMDSK:Earth Science > Sun-Earth interactions > ionosphere-magnetosphere dynamics > plasma waves',
+    'keywords_vocabulary': 'GCMDSK:GCMD Science Keywords:https://gcmd.earthdata.nasa.gov/kms/concepts/concept_scheme/sciencekeywords',
+    'iso_topic_category': 'climatologyMeteorologyAtmosphere', # Select from here, change or remove if this is not suitable https://wiki.esipfed.org/ISO_Topic_Categories
     'geospatial_lat_min': str(min(latitude_tx,latitude_rx)),
     'geospatial_lat_max': str(max(latitude_tx,latitude_rx)),
     'geospatial_lon_min': str(min(longitude_tx,longitude_rx)),
@@ -173,16 +175,24 @@ prideds.attrs = {
     'date_created': dtnow,
     'creator_type': 'person',
     'creator_institution': 'University Centre in Svalbard',
+    'creator_institution_pid': 'https://ror.org/03cyjf656', 
     'creator_name': 'Mikko Syrjäsuo',
     'creator_email': 'myemailhere@unis.no',
     'creator_url': 'https://www.unis.no/staff/mikko-syrjasuo/',
-    'publisher_name': 'National Infrastructure for Research Data Research Data Archive',
-    'publisher_email': 'archive.manager@norstore.no',
-    'publisher_url': 'https://archive.norstore.no/',
-    'project': 'Kjell Henriksen Observatory',
-    'license': 'https://creativecommons.org/licenses/by/4.0/',
+    'creator_pid': 'https://orcid.org/0000-0002-6113-6855',
+    'publisher_type': 'institution',
+    'publisher_name': 'Norwegian Meteorological Institute/Arctic Data Centre (NO/MET/ADC)',
+    'publisher_email': 'adc-support@met.no',
+    'publisher_institution': 'Norwegian Meteorological Institute',
+    'publisher_institution_pid': 'https://ror.org/001n36p86',
+    'publisher_url': 'https://adc.met.no/',
+    'project': 'Kjell Henriksen Observatory (KHO)',
+    'license': 'http://spdx.org/licenses/CC-BY-4.0 (CC-BY-4.0)',
     'standard_name_vocabulary': 'CF Standard Name Table v84',
     'comment': 'Raw data available from UNIS',
+    # TODO: Fill the below in based on https://adc.met.no/submit-data-as-netcdf-cf#platform
+    'instrument': '',
+    'instrument_vocabulary': '' 
 }
 
 #-----------------------------------------------
