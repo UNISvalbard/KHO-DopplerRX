@@ -40,10 +40,9 @@ destination_path = Path(config['netcdf-metadata-settings']['raw_data_folder'])
 # ------------------------------------------------
 # Import data of the RX signal
 
-# Create a list of filepaths soted by name (i.e. by time) corresponding to all the data created during a given day
+# Create a list of filepaths corresponding to all the data created during a given day
 day_data_path = data_path / target_date.strftime('%Y/%m/%d')
 files_list = list(day_data_path.glob('*-nogaps.hdf5'))
-sorted_files_list = sorted(files_list, key=lambda x: x.name)
 
 # Ceating a dictionnary for centralizing the data
 data_dict = {}
@@ -52,14 +51,30 @@ data_dict['samples_I'] = []
 data_dict['samples_Q'] = [] 
 
 # Fetch, concatenate and roughly format the data
-for file_path in sorted_files_list :
-    f = h5py.File(file_path, 'r')
+for i in range(24) :
+    # Add the data if exists
+    file_path = f"doppler_lyr_{target_date.strftime('%Y%m%d')}_{str(i)}UT-nogaps.hdf5"
+    if file_path in files_list : ### Error here : files list contains full path, but filepath is only the name of the file !
+        f = h5py.File(file_path, 'r')
 
-    data_dict['timestamps'].append(f['timestamps'][()].copy())
-    data_dict['samples_I'].append(f['IQ'][()].copy().real)
-    data_dict['samples_Q'].append(f['IQ'][()].copy().imag)
+        data_dict['timestamps'].append(f['timestamps'][()].copy())
+        data_dict['samples_I'].append(f['IQ'][()].copy().real)
+        data_dict['samples_Q'].append(f['IQ'][()].copy().imag)
 
-    f.close()
+        f.close()
+    
+    # else fill the missing hour with timestamped NaN
+    else :
+        Nsamples = 60*60*100    # 1 hour at 100Hz 
+        missing_hour = dt.datetime.combine(target_date, dt.time(hour=i))
+
+        missing_timestamps = np.arange(Nsamples) * 0.01 + missing_hour.timestamp()
+        missing_data = np.full((Nsamples, ), np.nan)
+
+        data_dict['timestamps'].append(missing_timestamps)
+        data_dict['samples_I'].append(missing_data)
+        data_dict['samples_Q'].append(missing_data)
+    
 
 for key in data_dict.keys() :
     data_dict[key] = np.concatenate(data_dict[key], axis=0)
