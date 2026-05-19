@@ -17,30 +17,60 @@ the CF version 1.8, which does not have the "radiation power" keyword, which
 is available in CF version 1.11
 
 To do:
-    - read real data...
-    - decide on filenaming conventions
     - find out how to make new CF-NetCDF-files available
-
 """
 
 import xarray as xr
 import numpy as np
-from datetime import datetime as dt
-
-Nsamples = 60*100 # One minute at 100Hz
-
-# Complex samples of RX signal
-# - replace with real data at some point...
-
-samples_I = np.random.randn(Nsamples)
-samples_Q = np.random.randn(Nsamples)
+import h5py
+import configparser
+from pathlib import Path
+import datetime as dt
 
 
-# Timestamps for the IQ samples sampled at 100Hz (dt=10ms)
+# ------------------------------------------------
+# Read config for testing
+config = configparser.ConfigParser()
+config.read("config.ini")
+data_path = Path(config['netcdf-metadata-settings']['raw_data_folder'])
+target_date = dt.datetime.strptime(config['netcdf-metadata-settings']['date'], '%Y/%m/%d').date()
+destination_path = Path(config['netcdf-metadata-settings']['raw_data_folder'])
 
-start = np.datetime64('2024-01-22T00:00:00')
-milliseconds_since_start = 10*np.arange(0, Nsamples).astype('int')
-end = start+(Nsamples-1)*np.timedelta64(10,'ms')
+
+# ------------------------------------------------
+# Import data of the RX signal
+
+# Create a list of filepaths soted by name (i.e. by time) corresponding to all the data created during a given day
+day_data_path = data_path / target_date.strftime('%Y/%m/%d')
+files_list = list(day_data_path.glob('*'))
+sorted_files_list = sorted(files_list, key=lambda x: x.name)
+
+# Ceating a dictionnary for centralizing the data
+data_dict = {}
+data_dict['timestamps'] = []
+data_dict['samples_I'] = []
+data_dict['samples_Q'] = [] 
+
+# Fetch, concatenate and roughly format the data
+for file_path in sorted_files_list :
+    f = h5py.File(file_path, 'r')
+
+    data_dict['timestamps'].append(f['timestamps'][()].copy())
+    data_dict['samples_I'].append(f['IQ'][()].copy().real)
+    data_dict['samples_Q'].append(f['IQ'][()].copy().imag)
+
+    f.close()
+
+for key in data_dict.keys() :
+    data_dict[key] = np.concatenate(data_dict[key], axis=0)
+
+start_timestamp = data_dict['timestamps'][0]
+data_dict['ms_since_start'] = (data_dict['timestamps'] - start_timestamp) * 1000
+data_dict['ms_since_start'] = data_dict['ms_since_start'].astype(int)
+
+
+# ------------------------------------------------
+# Create xr dataset
 
 # Transmitter details
 # - located in at the Polish Polar Station in Hornsund
@@ -50,6 +80,7 @@ latitude_tx = 77.00145
 longitude_tx = 15.54021
 tx_frequency = 4450000
 
+
 # Receiver details
 # - locate at the Kjell Henriksen Observatory
 # - receiver hardware uses an Ettus software-defined radio, which is
@@ -57,16 +88,16 @@ tx_frequency = 4450000
 # - receiver tuned 25Hz below the transmit frequency, so that
 #   we can avoid the "DC spike" by simply shifting the spectrum
 
-
 latitude_rx = 78.14798
 longitude_rx = 16.04235
 rx_frequency = 4450000-25
+
 
 prideds = xr.Dataset()
 
 prideds = xr.Dataset(
     coords={
-        'time': milliseconds_since_start,
+        'time': data_dict['ms_since_start'],
         'latitude_tx': latitude_tx,
         'longitude_tx': longitude_tx,
         'latitude_rx': latitude_rx,
@@ -74,21 +105,22 @@ prideds = xr.Dataset(
     }
 )
 
-prideds['samples_I'] = ("time", samples_I)
-prideds['samples_Q'] = ("time", samples_Q)
+prideds['samples_I'] = ("time", data_dict['samples_I'])
+prideds['samples_Q'] = ("time", data_dict['samples_Q'])
 prideds['tx_frequency'] = tx_frequency
 prideds['rx_frequency'] = rx_frequency
+
 
 #------------------------------------------------
 # Add metadata
 
-startdatestr = np.datetime_as_string(start, timezone='UTC')
-enddatestr = np.datetime_as_string(end, timezone='UTC')
+start_date = dt.datetime.fromtimestamp(data_dict['timestamps'][0], tz=dt.UTC)
+end_date = dt.datetime.fromtimestamp(data_dict['timestamps'][-1], tz=dt.UTC)
 
 prideds['time'].attrs = {
     'standard_name':'time',
     'long_name': 'time',
-    'units': f'milliseconds since {startdatestr}',
+    'units': f'milliseconds since {start_date.strftime('%Y-%m-%dT%H:%M:%S')}',
     'calendar': 'standard',
     'coverage_content_type': 'coordinate'
 }
@@ -152,7 +184,7 @@ prideds['rx_frequency'].attrs = {
 #------------------------------------------------
 # Global attributes
 
-dtnow = dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+dtnow = dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 # Global attributes based on https://adc.met.no/submit-data-as-netcdf-cf
 prideds.attrs = {
@@ -167,8 +199,8 @@ prideds.attrs = {
     'geospatial_lat_max': str(max(latitude_tx,latitude_rx)),
     'geospatial_lon_min': str(min(longitude_tx,longitude_rx)),
     'geospatial_lon_max': str(max(longitude_tx,longitude_rx)),
-    'time_coverage_start': startdatestr,
-    'time_coverage_end': enddatestr,
+    'time_coverage_start': start_date.strftime('%Y-%m-%dT%H:%M:%S'),
+    'time_coverage_end': end_date.strftime('%Y-%m-%dT%H:%M:%S'),
     'Conventions': 'ACDD-1.3, CF-1.11',
     'history': f'File created at {dtnow}',
     'processing_level': 'Missing samples replaced with zeros and resampled',
@@ -195,10 +227,11 @@ prideds.attrs = {
     'instrument_vocabulary': '' 
 }
 
+
 #-----------------------------------------------
 # Export to CF-NetCDF
 
-outfile = 'test5.nc'
+outfile = destination_path / f'test_PRIDE_{target_date.strftime('%Y%m%d')}.nc'
 
 # Specifiy encoding
 myencoding = {
