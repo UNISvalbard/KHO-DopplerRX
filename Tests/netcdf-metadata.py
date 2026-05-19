@@ -42,7 +42,7 @@ destination_path = Path(config['netcdf-metadata-settings']['raw_data_folder'])
 
 # Create a list of filepaths soted by name (i.e. by time) corresponding to all the data created during a given day
 day_data_path = data_path / target_date.strftime('%Y/%m/%d')
-files_list = list(day_data_path.glob('*'))
+files_list = list(day_data_path.glob('*-nogaps.hdf5'))
 sorted_files_list = sorted(files_list, key=lambda x: x.name)
 
 # Ceating a dictionnary for centralizing the data
