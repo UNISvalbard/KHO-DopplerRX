@@ -66,7 +66,7 @@ for i in range(24) :
     # else fill the missing hour with timestamped NaN
     else :
         Nsamples = 60*60*100    # 1 hour at 100Hz 
-        missing_hour = dt.datetime.combine(target_date, dt.time(hour=i))
+        missing_hour = dt.datetime.combine(target_date, dt.time(hour=i), tzinfo=dt.UTC)
 
         missing_timestamps = np.arange(Nsamples) * 0.01 + missing_hour.timestamp()
         missing_data = np.full((Nsamples, ), np.nan)
