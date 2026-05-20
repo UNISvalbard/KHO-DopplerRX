@@ -53,8 +53,8 @@ data_dict['samples_Q'] = []
 # Fetch, concatenate and roughly format the data
 for i in range(24) :
     # Add the data if exists
-    file_path = f"doppler_lyr_{target_date.strftime('%Y%m%d')}_{str(i)}UT-nogaps.hdf5"
-    if file_path in files_list : ### Error here : files list contains full path, but filepath is only the name of the file !
+    file_path = day_data_path / f"doppler_lyr_{target_date.strftime('%Y%m%d')}_{str(i)}UT-nogaps.hdf5"
+    if file_path in files_list :
         f = h5py.File(file_path, 'r')
 
         data_dict['timestamps'].append(f['timestamps'][()].copy())
