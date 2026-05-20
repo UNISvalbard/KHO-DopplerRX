@@ -117,13 +117,19 @@ def main():
     # iq = mydata["iq"]
 
     # To read nc files
-    mydata = xr.open_dataset(filename)
+    mydata = xr.open_dataset(filename, decode_cf=False)
     ts = np.array(mydata['time'])
     iq = np.array(mydata['samples_I'] + mydata['samples_Q'] * 1j)
 
-    ind = np.argsort(ts)
-    ts_sorted = ts[ind]  # One gets funny looking spectrograms if the
-    iq_sorted = iq[ind]  # samples are not in temporal order...
+    # Filter the data to a given hour and sort it
+    plotted_hour = 13
+    ind_filter = (ts >= ts[0] + plotted_hour * 3600000) & (ts < ts[0] + (plotted_hour + 1) * 3600000)   # 3600000 ms in one hour
+    ts_filtered = ts[ind_filter]
+    iq_filtered = iq[ind_filter]
+
+    ind_order = np.argsort(ts_filtered)
+    ts_sorted = ts_filtered[ind_order]  # One gets funny looking spectrograms if the
+    iq_sorted = iq_filtered[ind_order]  # samples are not in temporal order...
     fs = 100
 
     #plot the data that has not been filtered or downshited 
