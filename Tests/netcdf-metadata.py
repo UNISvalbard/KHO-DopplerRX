@@ -135,7 +135,7 @@ end_date = dt.datetime.fromtimestamp(data_dict['timestamps'][-1], tz=dt.UTC)
 prideds['time'].attrs = {
     'standard_name':'time',
     'long_name': 'time',
-    'units': f'milliseconds since {start_date.strftime('%Y-%m-%dT%H:%M:%S')}',
+    'units': f'milliseconds since {start_date.strftime('%Y-%m-%dT%H:%M:%SZ')}',
     'calendar': 'standard',
     'coverage_content_type': 'coordinate'
 }
