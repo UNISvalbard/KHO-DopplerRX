@@ -33,10 +33,10 @@ samples (we'll use 4096). Let's try 50% overlap...
 """
 
 
-def plot_spectrogram(ts, x, fs):
+def plot_spectrogram(timestamps, samples_IQ, sample_frequency):
     """Given a complex signal, plot its two-sided spectrogram"""
 
-    f, t, Sxx = ss.spectrogram(x, fs, "hann",
+    f, t, Sxx = ss.spectrogram(samples_IQ, sample_frequency, "hann",
                                nfft=4096, return_onesided=False,
                                scaling="spectrum")
     
@@ -56,8 +56,8 @@ def plot_spectrogram(ts, x, fs):
    # plt.ylim(fmin,fmax)
     plt.colorbar()
 
-    starttime=dt.datetime.utcfromtimestamp(ts[0])
-    plt.title(starttime.strftime("%Y-%m-%d %HUT"))
+    start_time = dt.datetime.fromtimestamp(timestamps[0], tz=dt.UTC)
+    plt.title(start_time.strftime("%Y-%m-%d %HUT"))
     plt.show()
 
     return f, t, Sxx, Syy
@@ -113,43 +113,46 @@ def main():
 
     # # To read hdf5 files
     # mydata = np.load(filename)
-    # ts = mydata["timestamps"]
-    # iq = mydata["iq"]
+    # timestamps = mydata["timestamps"]
+    # samples_IQ = mydata["iq"]
 
     # To read nc files
     mydata = xr.open_dataset(filename, decode_cf=False)
-    ts = np.array(mydata['time'])
-    iq = np.array(mydata['samples_I'] + mydata['samples_Q'] * 1j)
 
-    # Filter the data to a given hour and sort it
+    ms_since_start = np.array(mydata['time'])
+    start_date_str = mydata['time'].attrs['units'].split(' ')[2]
+    start_timestamp = dt.datetime.fromisoformat(start_date_str).timestamp()
+
+    timestamps_24h = ms_since_start/1000 + start_timestamp
+    samples_IQ_24h = np.array(mydata['samples_I'] + mydata['samples_Q'] * 1j)
+
+    # Select the data to a given hour and sort it
     plotted_hour = 13
-    ind_filter = (ts >= ts[0] + plotted_hour * 3600000) & (ts < ts[0] + (plotted_hour + 1) * 3600000)   # 3600000 ms in one hour
-    ts_filtered = ts[ind_filter]
-    iq_filtered = iq[ind_filter]
 
-    ind_order = np.argsort(ts_filtered)
-    ts_sorted = ts_filtered[ind_order]  # One gets funny looking spectrograms if the
-    iq_sorted = iq_filtered[ind_order]  # samples are not in temporal order...
-    fs = 100
+    selector = (timestamps_24h >= timestamps_24h[0] + plotted_hour*3600) & (timestamps_24h < timestamps_24h[0] + (plotted_hour + 1)*3600)
+    timestamps = timestamps_24h[selector]
+    samples_IQ = samples_IQ_24h[selector]
 
-    #plot the data that has not been filtered or downshited 
-    f,t,Sxx,Syy = plot_spectrogram(ts_sorted, iq_sorted, fs)
-    
-    timestamps = ts_sorted
-    sampleIQ = iq_sorted
+    order = np.argsort(timestamps)
+    timestamps = timestamps[order]  # One gets funny looking spectrograms if the
+    samples_IQ = samples_IQ[order]  # samples are not in temporal order...
+    sample_frequency = 100
+
+    #plot the data that has not been filtered or downshifted 
+    f, t, Sxx, Syy = plot_spectrogram(timestamps, samples_IQ, sample_frequency)
   
     f_LO = -25      # complex frequency mixing to shift the signal down by -25Hz and add a low pass filter to get 
     y_LO = np.exp(1j * 2 * np.pi * f_LO * timestamps) # rid of frequencies we aren't interested in
 
-    mixedIQ = sampleIQ * y_LO
+    mixed_IQ = samples_IQ * y_LO
 
-    b, a = ss.butter(4, 20 / (fs / 2), btype='low')
-    filteredIQ = ss.filtfilt(b, a, mixedIQ)
+    b, a = ss.butter(4, 20 / (sample_frequency / 2), btype='low')
+    filtered_IQ = ss.filtfilt(b, a, mixed_IQ)
     
-    f,t,Sxx,Syy = plot_spectrogram(timestamps, filteredIQ, fs)
+    f, t, Sxx, Syy = plot_spectrogram(timestamps, filtered_IQ, sample_frequency)
     
     # Run spectrogram + extract peaks of the unfiltered data
-    time_minutes, max_psd, max_freq = plot_max_psd_vs_time(ts_sorted, iq_sorted, fs)
+    time_minutes, max_psd, max_freq = plot_max_psd_vs_time(timestamps, samples_IQ, sample_frequency)
    
     plt.figure()
     plt.plot(time_minutes, max_freq)
@@ -160,10 +163,10 @@ def main():
     plt.show()
     
     # Run spectrogram + extract peaks of the unfiltered data
-    time_minutes, max_psd, max_freq = plot_max_psd_vs_time(timestamps, filteredIQ, fs)
+    time_minutes, max_psd, max_freq = plot_max_psd_vs_time(timestamps, filtered_IQ, sample_frequency)
    
     plt.figure()
-    plt.plot(time_minutes, max_freq,'x',markersize=2)
+    plt.plot(time_minutes, max_freq, 'x', markersize=2)
     plt.xlabel("Time (min)")
     plt.ylabel("Frequency of Maximum PSD (Hz)")
     plt.title("Frequency of Strongest Peak vs Time - filtered and downshifted")
@@ -171,9 +174,9 @@ def main():
     plt.show()
     
 
-    return mydata, ts, iq, ts_sorted, iq_sorted, f, t, Sxx, Syy
+    return mydata, timestamps_24h, samples_IQ_24h, selector, timestamps, samples_IQ, f, t, Sxx, Syy
 
 if __name__ == "__main__":
-    mydata, ts, iq, ts_sorted, iq_sorted, f, t, Sxx, Syy = main()
+    mydata, timestamps_24h, samples_IQ_24h, selector, ts_sorted, iq_sorted, f, t, Sxx, Syy = main()
 
     
