@@ -125,23 +125,6 @@ for key in data_dict.keys() :
 # ------------------------------------------------
 # Plot the obtained data
 
-# # Matrix of spectrograms via matplotlib
-# if args.plot_spectrogram :
-
-#     fig, ax = plt.subplots(nrows=12, ncols=2, sharex=False, figsize=(28, 24))
-
-#     for i in range(24) :
-#         ax[i%12][i//12].plot(data_dict['time'][i], data_dict['max_freq'][i], 'x', markersize=2)
-        
-#         fig.supylabel("Frequency of Maximum PSD (Hz)")
-#     fig.supxlabel("Time (s)")
-#     fig.suptitle("Frequency of Strongest Peak vs Time - filtered and downshifted")
-
-#     plt.tight_layout()
-#     plt.show()
-
-
-# Scrollable matplotlib specrtogram on 24h
 if args.plot_spectrogram :
     fig, ax = plt.subplots(figsize=(18, 5))
     plt.subplots_adjust(bottom=0.2)
