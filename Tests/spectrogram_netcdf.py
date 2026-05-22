@@ -72,7 +72,7 @@ for i in range(24) :
     # Find frequency where max occurs for each time bin
     max_index = np.argmax(Syy, axis=0)
     data_dict['max_freq'].append(f[max_index])
-    data_dict['time'].append(t)
+    data_dict['time'].append(t + i*3600)
 
     print(f'Spectrogram {i+1} done.')
 
