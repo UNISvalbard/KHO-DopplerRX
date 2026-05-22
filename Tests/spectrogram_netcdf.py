@@ -13,7 +13,7 @@ The spectrogram can also be plotted by the script using flag
 import scipy.signal as ss
 from numpy.fft import fftshift
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
+from matplotlib.widgets import Slider
 import numpy as np
 import datetime as dt
 import xarray as xr
@@ -140,16 +140,28 @@ for key in data_dict.keys() :
 #     plt.tight_layout()
 #     plt.show()
 
-# Scrollable spectrogram on 24h
-if args.plot_spectrogram :
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data_dict['time'], y=data_dict['max_freq'], mode='markers', marker=dict(symbol='cross', size=5)))
 
-    fig.update_layout(title=f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}",
-                      width=1800, height=500,
-                      xaxis_title="Hour of the day",
-                      yaxis_title="Frequency of Maximum PSD (Hz)", 
-                      showlegend=False, 
-                      dragmode='pan')
-    fig.update_xaxes(range=[0, 3600], rangeslider_visible=True)
-    fig.show()
+# Scrollable matplotlib specrtogram on 24h
+if args.plot_spectrogram :
+    fig, ax = plt.subplots(figsize=(18, 5))
+    plt.subplots_adjust(bottom=0.2)
+
+    ax.scatter(x=data_dict['time'], y=data_dict['max_freq'], marker='+', s=15)
+
+    ax.set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}")
+    ax.set_xlabel("Hour of the day")
+    ax.set_ylabel("Frequency of Maximum PSD (Hz)")
+    ax.set_xlim(0, 86400)
+
+    # Slider definition
+    window_width = 3600
+    ax_slider = plt.axes([0.1, 0.05, 0.8, 0.03])
+    slider = Slider(ax=ax_slider, label="", valmin=0, valmax=86400 - window_width, valinit=0)
+
+    def update(val):
+        start = slider.val
+        ax.set_xlim(start, start + window_width)
+        fig.canvas.draw_idle()
+
+    slider.on_changed(update)
+    plt.show()
