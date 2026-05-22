@@ -13,6 +13,7 @@ The spectrogram can also be plotted by the script using flag
 import scipy.signal as ss
 from numpy.fft import fftshift
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import numpy as np
 import datetime as dt
 import xarray as xr
@@ -37,19 +38,19 @@ destination_folder = Path(config['spectrogram_netcdf-settings']['destination_fol
 # ------------------------------------------------
 # Read 24h netcdf data file
 
-raw_dataset = xr.open_dataset(raw_data_file, decode_cf=False)
+with xr.open_dataset(raw_data_file, decode_cf=False) as raw_dataset :
 
-ms_since_start = np.array(raw_dataset['time'])
-start_date_str = raw_dataset['time'].attrs['units'].split(' ')[2]
-start_date = dt.datetime.fromisoformat(start_date_str)
+    ms_since_start = np.array(raw_dataset['time'])
+    start_date_str = raw_dataset['time'].attrs['units'].split(' ')[2]
+    start_date = dt.datetime.fromisoformat(start_date_str)
 
-timestamps = ms_since_start/1000 + start_date.timestamp()
-samples_IQ = np.array(raw_dataset['samples_I'] + raw_dataset['samples_Q'] * 1j)
+    timestamps = ms_since_start/1000 + start_date.timestamp()
+    samples_IQ = np.array(raw_dataset['samples_I'] + raw_dataset['samples_Q'] * 1j)
 
-order = np.argsort(timestamps)
-timestamps = timestamps[order]  # One gets funny looking spectrograms if the
-samples_IQ = samples_IQ[order]  # samples are not in temporal order...
-sample_frequency = 100
+    order = np.argsort(timestamps)
+    timestamps = timestamps[order]  # One gets funny looking spectrograms if the
+    samples_IQ = samples_IQ[order]  # samples are not in temporal order...
+    sample_frequency = 100
 
 
 # ------------------------------------------------
@@ -76,8 +77,8 @@ for i in range(24) :
 
     print(f'Spectrogram {i+1} done.')
 
-# for key in data_dict.keys() :
-#     data_dict[key] = np.concatenate(data_dict[key], axis=0)
+for key in data_dict.keys() :
+    data_dict[key] = np.concatenate(data_dict[key], axis=0)
 
 
 # # ------------------------------------------------
@@ -124,16 +125,31 @@ for i in range(24) :
 # ------------------------------------------------
 # Plot the obtained data
 
-if args.plot_spectrogram :
+# # Matrix of spectrograms via matplotlib
+# if args.plot_spectrogram :
 
-    fig, ax = plt.subplots(nrows=12, ncols=2, sharex=False, figsize=(28, 24))
+#     fig, ax = plt.subplots(nrows=12, ncols=2, sharex=False, figsize=(28, 24))
 
-    for i in range(24) :
-        ax[i%12][i//12].plot(data_dict['time'][i], data_dict['max_freq'][i], 'x', markersize=2)
+#     for i in range(24) :
+#         ax[i%12][i//12].plot(data_dict['time'][i], data_dict['max_freq'][i], 'x', markersize=2)
         
-        fig.supylabel("Frequency of Maximum PSD (Hz)")
-    fig.supxlabel("Time (s)")
-    fig.suptitle("Frequency of Strongest Peak vs Time - filtered and downshifted")
+#         fig.supylabel("Frequency of Maximum PSD (Hz)")
+#     fig.supxlabel("Time (s)")
+#     fig.suptitle("Frequency of Strongest Peak vs Time - filtered and downshifted")
 
-    plt.tight_layout()
-    plt.show()
+#     plt.tight_layout()
+#     plt.show()
+
+# Scrollable spectrogram on 24h
+if args.plot_spectrogram :
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=data_dict['time'], y=data_dict['max_freq'], mode='markers', marker=dict(symbol='cross', size=5)))
+
+    fig.update_layout(title=f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}",
+                      width=1800, height=500,
+                      xaxis_title="Hour of the day",
+                      yaxis_title="Frequency of Maximum PSD (Hz)", 
+                      showlegend=False, 
+                      dragmode='pan')
+    fig.update_xaxes(range=[0, 3600], rangeslider_visible=True)
+    fig.show()
