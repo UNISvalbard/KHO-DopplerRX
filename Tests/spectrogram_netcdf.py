@@ -55,18 +55,29 @@ sample_frequency = 100
 # ------------------------------------------------
 # Run spectrogram + extract peaks of the unfiltered data
 
-f, t, Sxx = ss.spectrogram(samples_IQ, sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
+data_dict = {}
+data_dict['max_freq'] = []
+data_dict['time'] = []
 
-# Convert to dB and normalize so strongest point is 0 dB
-Syy = 10 * np.log10(Sxx.squeeze())
-Syy = Syy - np.max(Syy)
+# Split the process in 24 hours to avoid computer explosion
+for i in range(24) :
+    hour_selector = (timestamps >= timestamps[0] + i*3600) & (timestamps < timestamps[0] + (i + 1)*3600)
 
-# Find frequency where max occurs for each time bin
-max_index = np.argmax(Syy, axis=0)
-max_freq = f[max_index]
+    f, t, Sxx = ss.spectrogram(samples_IQ[hour_selector], sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
 
-# # Convert spectrogram time to minutes
-# time_minutes = t / 60
+    # Convert to dB and normalize so strongest point is 0 dB
+    Syy = 10 * np.log10(Sxx.squeeze())
+    Syy = Syy - np.max(Syy)
+
+    # Find frequency where max occurs for each time bin
+    max_index = np.argmax(Syy, axis=0)
+    data_dict['max_freq'].append(f[max_index])
+    data_dict['time'].append(t)
+
+    print(f'Spectrogram {i+1} done.')
+
+for key in data_dict.keys() :
+    data_dict[key] = np.concatenate(data_dict[key], axis=0)
 
 
 # ------------------------------------------------
@@ -75,14 +86,14 @@ max_freq = f[max_index]
 prideds = xr.Dataset()
 
 # Time series
-prideds = xr.Dataset(coords={'time': ms_since_start})
-prideds['max_freq'] = ("time", max_freq)
+prideds = xr.Dataset(coords={'time': data_dict['time']})
+prideds['max_freq'] = ("time", data_dict['max_freq'])
 
 # Metadata
 prideds['time'].attrs = {
     'standard_name':'time',
     'long_name': 'time',
-    'units': f'milliseconds since {start_date.strftime('%Y-%m-%dT%H:%M:%SZ')}',
+    'units': f'seconds since {start_date.strftime('%Y-%m-%dT%H:%M:%SZ')}',
     'calendar': 'standard',
     'coverage_content_type': 'coordinate'
 }
@@ -112,4 +123,3 @@ prideds.to_netcdf(time_series_file, encoding=encoding)
 
 # ------------------------------------------------
 # Plot the obtained data
-
