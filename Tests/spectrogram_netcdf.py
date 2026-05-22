@@ -76,8 +76,8 @@ for i in range(24) :
 
     print(f'Spectrogram {i+1} done.')
 
-for key in data_dict.keys() :
-    data_dict[key] = np.concatenate(data_dict[key], axis=0)
+# for key in data_dict.keys() :
+#     data_dict[key] = np.concatenate(data_dict[key], axis=0)
 
 
 # # ------------------------------------------------
@@ -126,14 +126,14 @@ for key in data_dict.keys() :
 
 if args.plot_spectrogram :
 
-    fig, ax = plt.subplot(nrows=24, ncols=1)
+    fig, ax = plt.subplots(nrows=12, ncols=2, sharex=False, figsize=(28, 24))
 
-    for i in range(24)
+    for i in range(24) :
+        ax[i%12][i//12].plot(data_dict['time'][i], data_dict['max_freq'][i], 'x', markersize=2)
+        
+        fig.supylabel("Frequency of Maximum PSD (Hz)")
+    fig.supxlabel("Time (s)")
+    fig.suptitle("Frequency of Strongest Peak vs Time - filtered and downshifted")
 
-    plt.figure()
-    plt.plot(time_minutes, max_freq, 'x', markersize=2)
-    plt.xlabel("Time (min)")
-    plt.ylabel("Frequency of Maximum PSD (Hz)")
-    plt.title("Frequency of Strongest Peak vs Time - filtered and downshifted")
-    plt.grid(True)
+    plt.tight_layout()
     plt.show()
