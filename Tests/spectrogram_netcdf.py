@@ -80,46 +80,60 @@ for key in data_dict.keys() :
     data_dict[key] = np.concatenate(data_dict[key], axis=0)
 
 
-# ------------------------------------------------
-# Create the dataset, add metadata and save it to netcdf file
+# # ------------------------------------------------
+# # Create the dataset, add metadata and save it to netcdf file
 
-prideds = xr.Dataset()
+# prideds = xr.Dataset()
 
-# Time series
-prideds = xr.Dataset(coords={'time': data_dict['time']})
-prideds['max_freq'] = ("time", data_dict['max_freq'])
+# # Time series
+# prideds = xr.Dataset(coords={'time': data_dict['time']})
+# prideds['max_freq'] = ("time", data_dict['max_freq'])
 
-# Metadata
-prideds['time'].attrs = {
-    'standard_name':'time',
-    'long_name': 'time',
-    'units': f'seconds since {start_date.strftime('%Y-%m-%dT%H:%M:%SZ')}',
-    'calendar': 'standard',
-    'coverage_content_type': 'coordinate'
-}
+# # Metadata
+# prideds['time'].attrs = {
+#     'standard_name':'time',
+#     'long_name': 'time',
+#     'units': f'seconds since {start_date.strftime('%Y-%m-%dT%H:%M:%SZ')}',
+#     'calendar': 'standard',
+#     'coverage_content_type': 'coordinate'
+# }
 
-prideds['max_freq'].attrs = {
-    'long_name': 'Maximum frequency',
-    'units': 'Hz',
-    'coverage_content_type': 'physicalMeasurement'
-}
+# prideds['max_freq'].attrs = {
+#     'long_name': 'Maximum frequency',
+#     'units': 'Hz',
+#     'coverage_content_type': 'physicalMeasurement'
+# }
 
-# Export to netcdf
-time_series_file = destination_folder / f'test_PRIDE_spectrogram_{start_date.strftime('%Y%m%d')}.nc'
+# # Export to netcdf
+# time_series_file = destination_folder / f'test_PRIDE_spectrogram_{start_date.strftime('%Y%m%d')}.nc'
 
-encoding = {
-    'time': {
-        'dtype': 'int64',
-        '_FillValue': None  # Coordinate variables should not have fill values.
-    },
-    'max_freq': {
-        'dtype': 'float64',
-        '_FillValue': None
-    },
-}
+# encoding = {
+#     'time': {
+#         'dtype': 'int64',
+#         '_FillValue': None  # Coordinate variables should not have fill values.
+#     },
+#     'max_freq': {
+#         'dtype': 'float64',
+#         '_FillValue': None
+#     },
+# }
 
-prideds.to_netcdf(time_series_file, encoding=encoding)
+# prideds.to_netcdf(time_series_file, encoding=encoding)
 
 
 # ------------------------------------------------
 # Plot the obtained data
+
+if args.plot_spectrogram :
+
+    fig, ax = plt.subplot(nrows=24, ncols=1)
+
+    for i in range(24)
+
+    plt.figure()
+    plt.plot(time_minutes, max_freq, 'x', markersize=2)
+    plt.xlabel("Time (min)")
+    plt.ylabel("Frequency of Maximum PSD (Hz)")
+    plt.title("Frequency of Strongest Peak vs Time - filtered and downshifted")
+    plt.grid(True)
+    plt.show()
