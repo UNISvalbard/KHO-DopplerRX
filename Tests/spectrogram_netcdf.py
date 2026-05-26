@@ -3,11 +3,16 @@ Created on Thu May 21
 
 @author: Olivier
 
-This script is based on existing code found in spectrogram_1h.py
+This script is based on existing code found in spectrogram_1h.py and netcdf-metadata.py
 
+Default comportment :
 This script takes in a raw 24h PRIDE netcdf file and creates a spectrogram.
-The spectrogram is saved as a time series in a netcdf file.
-The spectrogram can also be plotted by the script using flag
+This results in a time series which is then refined and saved in a netcdf file.
+
+Flags :
+-p : This is used to plot the spectrogram in a 24h format.
+-r : This is used to read an existing time series instead of reading the rawdata and computing the spectrogram again. 
+     N.B.: this flag should be used alongside the -p flag, otherwise nothing happens
 """
 
 import scipy.signal as ss
