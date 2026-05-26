@@ -14,6 +14,7 @@ import scipy.signal as ss
 from numpy.fft import fftshift
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+import matplotlib.dates as mdates
 import numpy as np
 import datetime as dt
 import xarray as xr
@@ -50,7 +51,7 @@ if args.read_timeseries :
 
         start_date_str = timeseries_dataset['time'].attrs['units'].split(' ')[2]
         start_date = dt.datetime.fromisoformat(start_date_str)
-        timestamps = data_dict['time'] + start_date.timestamp()
+        data_dict['timestamps'] = np.array([start_date + dt.timedelta(seconds=int(data_dict['time'][k])) for k in range(len(data_dict['time']))])
 
 
 # ------------------------------------------------
@@ -64,11 +65,11 @@ else :
         start_date_str = raw_dataset['time'].attrs['units'].split(' ')[2]
         start_date = dt.datetime.fromisoformat(start_date_str)
 
-        timestamps = ms_since_start/1000 + start_date.timestamp()
+        raw_timestamps = ms_since_start/1000 + start_date.timestamp()
         samples_IQ = np.array(raw_dataset['samples_I'] + raw_dataset['samples_Q'] * 1j)
 
-        order = np.argsort(timestamps)
-        timestamps = timestamps[order]  # One gets funny looking spectrograms if the
+        order = np.argsort(raw_timestamps)
+        raw_timestamps = raw_timestamps[order]  # One gets funny looking spectrograms if the
         samples_IQ = samples_IQ[order]  # samples are not in temporal order...
         sample_frequency = 100
 
@@ -82,7 +83,7 @@ else :
 
     # Split the process in 24 hours to avoid computer explosion
     for i in range(24) :
-        hour_selector = (timestamps >= timestamps[0] + i*3600) & (timestamps < timestamps[0] + (i + 1)*3600)
+        hour_selector = (raw_timestamps >= raw_timestamps[0] + i*3600) & (raw_timestamps < raw_timestamps[0] + (i + 1)*3600)
 
         f, t, Sxx = ss.spectrogram(samples_IQ[hour_selector], sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
 
@@ -99,6 +100,8 @@ else :
 
     for key in data_dict.keys() :
         data_dict[key] = np.concatenate(data_dict[key], axis=0)
+
+    data_dict['timestamps'] = np.array([start_date + dt.timedelta(seconds=int(data_dict['time'][k])) for k in range(len(data_dict['time']))])
 
 
     # ------------------------------------------------
@@ -149,22 +152,47 @@ if args.plot_spectrogram :
     fig, ax = plt.subplots(figsize=(18, 5))
     plt.subplots_adjust(bottom=0.2)
 
-    ax.scatter(x=data_dict['time'], y=data_dict['max_freq'], marker='+', s=15)
+    x_data = data_dict['timestamps']
+
+    ax.scatter(x=x_data, y=data_dict['max_freq'], marker='+', s=15)
+    ax.set_xlim(x_data[0], x_data[-1])
 
     ax.set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}")
-    ax.set_xlabel("Hour of the day")
+    ax.set_xlabel("Time")
     ax.set_ylabel("Frequency of Maximum PSD (Hz)")
-    ax.set_xlim(0, 86400)
+    ax.grid()
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
-    # Slider definition
-    window_width = 3600
+
+    # Slider definition and fig update 
+    window_width = dt.timedelta(hours=1)
     ax_slider = plt.axes([0.1, 0.05, 0.8, 0.03])
-    slider = Slider(ax=ax_slider, label="", valmin=0, valmax=86400 - window_width, valinit=0)
+    slider = Slider(ax=ax_slider, label="Displayed hour", valmin=0, valmax=1, valinit=0)
 
-    def update(val):
-        start = slider.val
-        ax.set_xlim(start, start + window_width)
+    def format_time(val) : 
+        return x_data[0] + val * (x_data[-1] - dt.timedelta(hours=1) - x_data[0])
+
+    slider.valtext.set_text(f"{format_time(slider.val).strftime('%H:%M')}")
+
+    def update(val) :
+        displayed_hour = format_time(slider.val)
+        ax.set_xlim(displayed_hour, displayed_hour + window_width)
+        slider.valtext.set_text(f"{format_time(slider.val).strftime('%H:%M')}")
         fig.canvas.draw_idle()
-
     slider.on_changed(update)
+
+    # Handling function for the mouse wheel
+    def on_scroll(event) :
+        if event.inaxes == ax_slider or event.inaxes == ax :
+            current_val = slider.val
+            step = 0.01
+            
+            if event.step < 0:
+                new_val = min(current_val + step, slider.valmax)
+            else:
+                new_val = max(current_val - step, slider.valmin)
+                
+            slider.set_val(new_val)
+    fig.canvas.mpl_connect('scroll_event', on_scroll)
+
     plt.show()
