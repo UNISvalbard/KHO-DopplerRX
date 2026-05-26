@@ -13,6 +13,8 @@ The spectrogram can also be plotted by the script using flag
 import scipy.signal as ss
 from numpy.fft import fftshift
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
+import matplotlib.dates as mdates
 import numpy as np
 import datetime as dt
 import xarray as xr
@@ -26,100 +28,181 @@ import configparser
 
 parser = argparse.ArgumentParser(description="Test spectrogram")
 parser.add_argument("-p", "--plot-spectrogram", default=False, action=argparse.BooleanOptionalAction)
+parser.add_argument("-r", "--read-timeseries", default=False, action=argparse.BooleanOptionalAction)
 args = parser.parse_args()
 
 config = configparser.ConfigParser()
 config.read('config.ini')
-raw_data_file = Path(config['spectrogram_netcdf-settings']['raw_data_file'])
+raw_data_folder = Path(config['spectrogram_netcdf-settings']['raw_data_folder'])
 destination_folder = Path(config['spectrogram_netcdf-settings']['destination_folder'])
+date = dt.datetime.strptime(config['spectrogram_netcdf-settings']['date'], '%Y/%m/%d')
 
 
 # ------------------------------------------------
-# Read 24h netcdf data file
+# Read existing time-series if chosen to
 
-raw_dataset = xr.open_dataset(raw_data_file, decode_cf=False)
+if args.read_timeseries :
+    time_series_file = destination_folder / f'test_PRIDE_spectrogram_{date.strftime('%Y%m%d')}.nc'
+    with xr.open_dataset(time_series_file, decode_cf=False) as timeseries_dataset :
 
-ms_since_start = np.array(raw_dataset['time'])
-start_date_str = raw_dataset['time'].attrs['units'].split(' ')[2]
-start_date = dt.datetime.fromisoformat(start_date_str)
+        data_dict = {}
+        data_dict['time'] = np.array(timeseries_dataset['time'])
+        data_dict['max_freq'] = np.array(timeseries_dataset['max_freq'])
 
-timestamps = ms_since_start/1000 + start_date.timestamp()
-samples_IQ = np.array(raw_dataset['samples_I'] + raw_dataset['samples_Q'] * 1j)
-
-order = np.argsort(timestamps)
-timestamps = timestamps[order]  # One gets funny looking spectrograms if the
-samples_IQ = samples_IQ[order]  # samples are not in temporal order...
-sample_frequency = 100
+        start_date_str = timeseries_dataset['time'].attrs['units'].split(' ')[2]
+        start_date = dt.datetime.fromisoformat(start_date_str)
+        data_dict['timestamps'] = np.array([start_date + dt.timedelta(seconds=int(data_dict['time'][k])) for k in range(len(data_dict['time']))])
 
 
 # ------------------------------------------------
-# Run spectrogram + extract peaks of the unfiltered data
+# Read raw netcdf data file and create spectrogram timeseries (Default)
 
-data_dict = {}
-data_dict['max_freq'] = []
-data_dict['time'] = []
+else :
+    raw_data_file = raw_data_folder / f'test_PRIDE_{date.strftime('%Y%m%d')}.nc'
+    with xr.open_dataset(raw_data_file, decode_cf=False) as raw_dataset :
 
-# Split the process in 24 hours to avoid computer explosion
-for i in range(24) :
-    hour_selector = (timestamps >= timestamps[0] + i*3600) & (timestamps < timestamps[0] + (i + 1)*3600)
+        ms_since_start = np.array(raw_dataset['time'])
+        start_date_str = raw_dataset['time'].attrs['units'].split(' ')[2]
+        start_date = dt.datetime.fromisoformat(start_date_str)
 
-    f, t, Sxx = ss.spectrogram(samples_IQ[hour_selector], sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
+        raw_timestamps = ms_since_start/1000 + start_date.timestamp()
+        samples_IQ = np.array(raw_dataset['samples_I'] + raw_dataset['samples_Q'] * 1j)
 
-    # Convert to dB and normalize so strongest point is 0 dB
-    Syy = 10 * np.log10(Sxx.squeeze())
-    Syy = Syy - np.max(Syy)
-
-    # Find frequency where max occurs for each time bin
-    max_index = np.argmax(Syy, axis=0)
-    data_dict['max_freq'].append(f[max_index])
-    data_dict['time'].append(t + i*3600)
-
-    print(f'Spectrogram {i+1} done.')
-
-for key in data_dict.keys() :
-    data_dict[key] = np.concatenate(data_dict[key], axis=0)
+        order = np.argsort(raw_timestamps)
+        raw_timestamps = raw_timestamps[order]  # One gets funny looking spectrograms if the
+        samples_IQ = samples_IQ[order]  # samples are not in temporal order...
+        sample_frequency = 100
 
 
-# ------------------------------------------------
-# Create the dataset, add metadata and save it to netcdf file
+    # ------------------------------------------------
+    # Run spectrogram + extract peaks of the unfiltered data
 
-prideds = xr.Dataset()
+    data_dict = {}
+    data_dict['max_freq'] = []
+    data_dict['time'] = []
 
-# Time series
-prideds = xr.Dataset(coords={'time': data_dict['time']})
-prideds['max_freq'] = ("time", data_dict['max_freq'])
+    # Split the process in 24 hours to avoid computer explosion
+    for i in range(24) :
+        hour_selector = (raw_timestamps >= raw_timestamps[0] + i*3600) & (raw_timestamps < raw_timestamps[0] + (i + 1)*3600)
 
-# Metadata
-prideds['time'].attrs = {
-    'standard_name':'time',
-    'long_name': 'time',
-    'units': f'seconds since {start_date.strftime('%Y-%m-%dT%H:%M:%SZ')}',
-    'calendar': 'standard',
-    'coverage_content_type': 'coordinate'
-}
+        f, t, Sxx = ss.spectrogram(samples_IQ[hour_selector], sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
 
-prideds['max_freq'].attrs = {
-    'long_name': 'Maximum frequency',
-    'units': 'Hz',
-    'coverage_content_type': 'physicalMeasurement'
-}
+        # Convert to dB and normalize so strongest point is 0 dB
+        Syy = 10 * np.log10(Sxx.squeeze())
+        Syy = Syy - np.max(Syy)
 
-# Export to netcdf
-time_series_file = destination_folder / f'test_PRIDE_spectrogram_{start_date.strftime('%Y%m%d')}.nc'
+        # Find frequency where max occurs for each time bin
+        max_index = np.argmax(Syy, axis=0)
+        data_dict['max_freq'].append(f[max_index])
+        
+        data_dict['time'].append(t + i*3600)
 
-encoding = {
-    'time': {
-        'dtype': 'int64',
-        '_FillValue': None  # Coordinate variables should not have fill values.
-    },
-    'max_freq': {
-        'dtype': 'float64',
-        '_FillValue': None
-    },
-}
+        print(f'Spectrogram {i+1} done.')
 
-prideds.to_netcdf(time_series_file, encoding=encoding)
+    for key in data_dict.keys() :
+        data_dict[key] = np.concatenate(data_dict[key], axis=0)
+    
+    # Replace sequences of 0 originating from missing data with NaNs
+    zeros_filter = (data_dict['max_freq'] == 0)
+    diff = np.diff(np.concatenate(([0], zeros_filter, [0])))
+    sequence_starts = np.where(diff == 1)[0]
+    sequence_ends = np.where(diff == -1)[0]
+    for s, e in zip(sequence_starts, sequence_ends) :
+        if e - s >= 2 :
+            data_dict['max_freq'][s:e] = np.nan
+
+    data_dict['timestamps'] = np.array([start_date + dt.timedelta(seconds=int(data_dict['time'][k])) for k in range(len(data_dict['time']))])
+
+
+    # ------------------------------------------------
+    # Create the dataset, add metadata and save it to netcdf file
+
+    prideds = xr.Dataset()
+
+    # Time series
+    prideds = xr.Dataset(coords={'time': data_dict['time']})
+    prideds['max_freq'] = ("time", data_dict['max_freq'])
+
+    # Metadata
+    prideds['time'].attrs = {
+        'standard_name':'time',
+        'long_name': 'time',
+        'units': f'seconds since {start_date.strftime('%Y-%m-%dT%H:%M:%SZ')}',
+        'calendar': 'standard',
+        'coverage_content_type': 'coordinate'
+    }
+
+    prideds['max_freq'].attrs = {
+        'long_name': 'Maximum frequency',
+        'units': 'Hz',
+        'coverage_content_type': 'physicalMeasurement'
+    }
+
+    # Export to netcdf
+    time_series_file = destination_folder / f'test_PRIDE_spectrogram_{start_date.strftime('%Y%m%d')}.nc'
+
+    encoding = {
+        'time': {
+            'dtype': 'int64',
+            '_FillValue': None  # Coordinate variables should not have fill values.
+        },
+        'max_freq': {
+            'dtype': 'float64',
+            '_FillValue': None
+        },
+    }
+
+    prideds.to_netcdf(time_series_file, encoding=encoding)
 
 
 # ------------------------------------------------
 # Plot the obtained data
+
+if args.plot_spectrogram :
+    fig, ax = plt.subplots(figsize=(18, 5))
+    plt.subplots_adjust(bottom=0.2)
+
+    x_data = data_dict['timestamps']
+
+    ax.scatter(x=x_data, y=data_dict['max_freq'], marker='+', s=15)
+    ax.set_xlim(x_data[0], x_data[-1])
+
+    ax.set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Frequency of Maximum PSD (Hz)")
+    ax.grid()
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+
+
+    # Slider definition and fig update 
+    window_width = dt.timedelta(hours=1)
+    ax_slider = plt.axes([0.1, 0.05, 0.8, 0.03])
+    slider = Slider(ax=ax_slider, label="Displayed hour", valmin=0, valmax=1, valinit=0)
+
+    def format_time(val) : 
+        return x_data[0] + val * (x_data[-1] - dt.timedelta(hours=1) - x_data[0])
+
+    slider.valtext.set_text(f"{format_time(slider.val).strftime('%H:%M')}")
+
+    def update(val) :
+        displayed_hour = format_time(slider.val)
+        ax.set_xlim(displayed_hour, displayed_hour + window_width)
+        slider.valtext.set_text(f"{format_time(slider.val).strftime('%H:%M')}")
+        fig.canvas.draw_idle()
+    slider.on_changed(update)
+
+    # Handling function for the mouse wheel
+    def on_scroll(event) :
+        if event.inaxes == ax_slider or event.inaxes == ax :
+            current_val = slider.val
+            step = 0.01
+            
+            if event.step < 0:
+                new_val = min(current_val + step, slider.valmax)
+            else:
+                new_val = max(current_val - step, slider.valmin)
+                
+            slider.set_val(new_val)
+    fig.canvas.mpl_connect('scroll_event', on_scroll)
+
+    plt.show()
