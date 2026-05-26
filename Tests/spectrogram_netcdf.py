@@ -94,12 +94,22 @@ else :
         # Find frequency where max occurs for each time bin
         max_index = np.argmax(Syy, axis=0)
         data_dict['max_freq'].append(f[max_index])
+        
         data_dict['time'].append(t + i*3600)
 
         print(f'Spectrogram {i+1} done.')
 
     for key in data_dict.keys() :
         data_dict[key] = np.concatenate(data_dict[key], axis=0)
+    
+    # Replace sequences of 0 originating from missing data with NaNs
+    zeros_filter = (data_dict['max_freq'] == 0)
+    diff = np.diff(np.concatenate(([0], zeros_filter, [0])))
+    sequence_starts = np.where(diff == 1)[0]
+    sequence_ends = np.where(diff == -1)[0]
+    for s, e in zip(sequence_starts, sequence_ends) :
+        if e - s >= 2 :
+            data_dict['max_freq'][s:e] = np.nan
 
     data_dict['timestamps'] = np.array([start_date + dt.timedelta(seconds=int(data_dict['time'][k])) for k in range(len(data_dict['time']))])
 
