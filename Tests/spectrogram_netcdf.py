@@ -32,17 +32,19 @@ args = parser.parse_args()
 
 config = configparser.ConfigParser()
 config.read('config.ini')
-raw_data_file = Path(config['spectrogram_netcdf-settings']['raw_data_file'])
+raw_data_folder = Path(config['spectrogram_netcdf-settings']['raw_data_folder'])
 destination_folder = Path(config['spectrogram_netcdf-settings']['destination_folder'])
+date = dt.datetime.strptime(config['spectrogram_netcdf-settings']['date'], '%Y/%m/%d')
 
 
 # ------------------------------------------------
 # Read existing time-series if chosen to
 
 if args.read_timeseries :
-    with xr.open_dataset(raw_data_file, decode_cf=False) as timeseries_dataset :
-        data_dict = {}
+    time_series_file = destination_folder / f'test_PRIDE_spectrogram_{date.strftime('%Y%m%d')}.nc'
+    with xr.open_dataset(time_series_file, decode_cf=False) as timeseries_dataset :
 
+        data_dict = {}
         data_dict['time'] = np.array(timeseries_dataset['time'])
         data_dict['max_freq'] = np.array(timeseries_dataset['max_freq'])
 
@@ -51,11 +53,11 @@ if args.read_timeseries :
         timestamps = data_dict['time'] + start_date.timestamp()
 
 
-
 # ------------------------------------------------
 # Read raw netcdf data file and create spectrogram timeseries (Default)
 
 else :
+    raw_data_file = raw_data_folder / f'test_PRIDE_{date.strftime('%Y%m%d')}.nc'
     with xr.open_dataset(raw_data_file, decode_cf=False) as raw_dataset :
 
         ms_since_start = np.array(raw_dataset['time'])
