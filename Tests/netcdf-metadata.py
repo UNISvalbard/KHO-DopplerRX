@@ -24,6 +24,7 @@ import xarray as xr
 import numpy as np
 import h5py
 import configparser
+import argparse
 from pathlib import Path
 import datetime as dt
 
@@ -33,8 +34,15 @@ import datetime as dt
 config = configparser.ConfigParser()
 config.read("config.ini")
 data_path = Path(config['netcdf-metadata-settings']['raw_data_folder'])
-target_date = dt.datetime.strptime(config['netcdf-metadata-settings']['date'], '%Y/%m/%d').date()
+str_date = config['netcdf-metadata-settings']['date'], '%Y/%m/%d'
 destination_path = Path(config['netcdf-metadata-settings']['destination_folder'])
+
+parser = argparse.ArgumentParser(description="File converter hdf5 to netcdf with metadata")
+parser.add_argument("-d", "--date", default=str_date)
+args = parser.parse_args()
+str_date = args.date
+
+target_date = dt.datetime.strptime(str_date, '%Y/%m/%d').date()
 
 
 # ------------------------------------------------

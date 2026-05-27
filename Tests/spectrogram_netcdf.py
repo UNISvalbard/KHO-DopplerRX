@@ -31,17 +31,21 @@ import configparser
 # ------------------------------------------------
 # Read config and parse args
 
-parser = argparse.ArgumentParser(description="Test spectrogram")
-parser.add_argument("-p", "--plot-spectrogram", default=False, action=argparse.BooleanOptionalAction)
-parser.add_argument("-r", "--read-timeseries", default=False, action=argparse.BooleanOptionalAction)
-args = parser.parse_args()
-
 config = configparser.ConfigParser()
 config.read('config.ini')
 raw_data_folder = Path(config['spectrogram_netcdf-settings']['raw_data_folder'])
 destination_folder = Path(config['spectrogram_netcdf-settings']['destination_folder'])
-date = dt.datetime.strptime(config['spectrogram_netcdf-settings']['date'], '%Y/%m/%d')
+str_date = config['spectrogram_netcdf-settings']['date']
 
+parser = argparse.ArgumentParser(description="Test spectrogram")
+parser.add_argument("-p", "--plot-spectrogram", default=False, action=argparse.BooleanOptionalAction)
+parser.add_argument("-r", "--read-timeseries", default=False, action=argparse.BooleanOptionalAction)
+parser.add_argument("-d", "--date", default=str_date)
+args = parser.parse_args()
+
+str_date = args.date
+
+date = dt.datetime.strptime(str_date, '%Y/%m/%d')
 
 # ------------------------------------------------
 # Read existing time-series if chosen to
