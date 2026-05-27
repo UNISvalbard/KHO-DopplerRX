@@ -206,7 +206,21 @@ prideds.attrs = {
     'researchinsvalbard_id': '11522',
     'title': 'Polar Research Ionospheric Doppler Experiment',
     # TODO: The summary could be longer. Like an abstract for a paper, describing the data and processing if applicable.
-    'summary': 'Records of received continuous-wave transmissions at a single frequency bounced reflected by the ionosphere',
+    'summary':  """
+                Records of received continuous-wave transmissions at a single frequency bounced reflected by the ionosphere.
+
+                The data contained in this netcdf file consists of a 100 Hz sample of the received signal from the PRIDE radar located on Svalbard
+                over the course of 24 hours, decoupled into its I and Q components.
+                
+                The transmitter emits a 20W continuous carrier wave at 4.45 MHz.
+                When the waves reflect back to the receiver, any changes in the ionosphere properties, mainly due to Atmospheric Gravity waves
+                and Ultra Low Frequency Magneto Hydodynamic waves, contribute to a Doppler shift that can be measured.
+                The receiver loop antenna is connected to a software-defined radio via a lowpass filter, and its output is processed as a single I/Q complex signal.
+                Initially recorded at a 200 kHz sampling rate callibrated via GNSS time, the I/Q samples are decimated to a 100 Hz sampling rate. 
+                Maintenance on the system, power cuts or other factors can sometimes lead to missing samples, which are filled with zeros 
+                before the decimation to minimise the impact on the final samples.
+                The I and Q components of the signal are decoupled and finally saved separately into this netcdf files along with their timestamp. 
+                """,
     'keywords': 'GCMDSK:Earth Science > Sun-Earth interactions > ionosphere-magnetosphere dynamics > plasma waves',
     'keywords_vocabulary': 'GCMDSK:GCMD Science Keywords:https://gcmd.earthdata.nasa.gov/kms/concepts/concept_scheme/sciencekeywords',
     'iso_topic_category': 'climatologyMeteorologyAtmosphere', # Select from here, change or remove if this is not suitable https://wiki.esipfed.org/ISO_Topic_Categories
@@ -238,7 +252,7 @@ prideds.attrs = {
     'standard_name_vocabulary': 'CF Standard Name Table v84',
     'comment': 'Raw data available from UNIS',
     # TODO: Fill the below in based on https://adc.met.no/submit-data-as-netcdf-cf#platform
-    'instrument': '',
+    'instrument': 'Polar Research Ionospheric Doppler Experiment (PRIDE)',
     'instrument_vocabulary': '' 
 }
 
