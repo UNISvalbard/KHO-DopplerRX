@@ -34,7 +34,7 @@ config = configparser.ConfigParser()
 config.read("config.ini")
 data_path = Path(config['netcdf-metadata-settings']['raw_data_folder'])
 target_date = dt.datetime.strptime(config['netcdf-metadata-settings']['date'], '%Y/%m/%d').date()
-destination_path = Path(config['netcdf-metadata-settings']['raw_data_folder'])
+destination_path = Path(config['netcdf-metadata-settings']['destination_folder'])
 
 
 # ------------------------------------------------
@@ -214,7 +214,7 @@ prideds.attrs = {
                 
                 The transmitter emits a 20W continuous carrier wave at 4.45 MHz.
                 When the waves reflect back to the receiver, any changes in the ionosphere properties, mainly due to Atmospheric Gravity waves
-                and Ultra Low Frequency Magneto Hydodynamic waves, contribute to a Doppler shift that can be measured.
+                and Ultra Low Frequency Magnetohydodynamic waves, contribute to a Doppler shift that can be measured.
                 The receiver loop antenna is connected to a software-defined radio via a lowpass filter, and its output is processed as a single I/Q complex signal.
                 Initially recorded at a 200 kHz sampling rate callibrated via GNSS time, the I/Q samples are decimated to a 100 Hz sampling rate. 
                 Maintenance on the system, power cuts or other factors can sometimes lead to missing samples, which are filled with zeros 
@@ -252,8 +252,9 @@ prideds.attrs = {
     'standard_name_vocabulary': 'CF Standard Name Table v84',
     'comment': 'Raw data available from UNIS',
     # TODO: Fill the below in based on https://adc.met.no/submit-data-as-netcdf-cf#platform
-    'instrument': 'Polar Research Ionospheric Doppler Experiment (PRIDE)',
-    'instrument_vocabulary': '' 
+    'instrument': '',
+    'instrument_vocabulary': '',
+    'project': 'Polar Research Ionospheric Doppler Experiment (PRIDE)'
 }
 
 
