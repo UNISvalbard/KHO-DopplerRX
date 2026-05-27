@@ -169,13 +169,14 @@ if args.plot_spectrogram :
 
     x_data = data_dict['timestamps']
 
-    ax.scatter(x=x_data, y=data_dict['max_freq'], marker='+', s=15)
+    ax.plot(x_data, data_dict['max_freq'], linestyle='None', marker='+', markersize=4)
     ax.set_xlim(x_data[0], x_data[-1])
+    ax.set_autoscale_on(False)
 
     ax.set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}")
     ax.set_xlabel("Time")
     ax.set_ylabel("Frequency of Maximum PSD (Hz)")
-    ax.grid()
+    ax.grid(alpha=0.3)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
 
@@ -192,15 +193,14 @@ if args.plot_spectrogram :
     def update(val) :
         displayed_hour = format_time(slider.val)
         ax.set_xlim(displayed_hour, displayed_hour + window_width)
-        slider.valtext.set_text(f"{format_time(slider.val).strftime('%H:%M')}")
-        fig.canvas.draw_idle()
+        slider.valtext.set_text(f"{displayed_hour.strftime('%H:%M')}")
     slider.on_changed(update)
 
     # Handling function for the mouse wheel
     def on_scroll(event) :
         if event.inaxes == ax_slider or event.inaxes == ax :
             current_val = slider.val
-            step = 0.01
+            step = 0.005
             
             if event.step < 0:
                 new_val = min(current_val + step, slider.valmax)
