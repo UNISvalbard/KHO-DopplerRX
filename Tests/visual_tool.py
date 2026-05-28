@@ -167,24 +167,29 @@ class PRIDE_GUI() :
             self.create_timeseries_button.config(state="normal")
     
     def conversion_worker(self, start_date, end_date, mode) :
-        working_date = start_date
-        nbr_files_converted = 0
-        if mode == 'publishable':
-            script = 'netcdf-metadata.py'
-        elif mode == 'spectrogram':
-            script = 'spectrogram_netcdf.py'
-        while working_date <= end_date :
-            try :
-                # create one publishable file
-                subprocess.run([sys.executable, script, f'-d={working_date.strftime('%Y/%m/%d')}'], check=True)
-                nbr_files_converted += 1
-                self.conversion_status.config(text=f'Conversion running... {nbr_files_converted} {mode} files created.')
-            except FileNotFoundError as err :
-                self.conversion_status.config(text=f'Conversion running... {nbr_files_converted} {mode} files created. No file found for {working_date.strftime('%Y/%m/%d')}')
-            finally :
-                working_date += dt.timedelta(days=1)
-        self.conversion_status.config(text=f'Conversion completed. {nbr_files_converted} {mode} files created.')
-
+        try : 
+            working_date = start_date
+            nbr_files_converted = 0
+            if mode == 'publishable':
+                script = 'netcdf-metadata.py'
+            elif mode == 'spectrogram':
+                script = 'spectrogram_netcdf.py'
+            while working_date <= end_date :
+                try :
+                    # create one publishable file
+                    subprocess.run([sys.executable, script, f'-d={working_date.strftime('%Y/%m/%d')}'], check=True)
+                    nbr_files_converted += 1
+                    self.conversion_status.config(text=f'Conversion running... {nbr_files_converted} {mode} files created.')
+                except FileNotFoundError as err :
+                    self.conversion_status.config(text=f'Conversion running... {nbr_files_converted} {mode} files created. No file found for {working_date.strftime('%Y/%m/%d')}')
+                finally :
+                    working_date += dt.timedelta(days=1)
+            self.conversion_status.config(text=f'Conversion completed. {nbr_files_converted} {mode} files created.')
+        except Exception as err :
+            self.conversion_status.config(text="Conversion failed")
+            messagebox.showerror("Error: ", str(err))
+        finally :
+            self.create_timeseries_button.config(state="normal")
 
     
     # ------------------------------------------------
@@ -225,13 +230,13 @@ class PRIDE_GUI() :
         # ttk.Radiobutton(mode_frame, text="Spectral width", variable=self.plot_type, value="w_l").grid(row=1, column=3, padx=5, pady=5)
         # ttk.Radiobutton(mode_frame, text="Elevation angle", variable=self.plot_type, value="elv").grid(row=1, column=4, padx=5, pady=5)
 
-        # # Plotting button
-        # self.plot_button = ttk.Button(self.plotter_frame, text="Generate Plot", command=self.display_plot)
-        # self.plot_button.pack(pady=5)
+        # Plotting button
+        self.plot_button = ttk.Button(self.plotter_frame, text="Generate Plot", command=self.display_plot)
+        self.plot_button.pack(pady=5)
         
-        # # Plotting area
-        # self.plot_canvas_frame = ttk.Frame(self.plotter_frame)
-        # self.plot_canvas_frame.pack(fill="both", expand=True, padx=20, pady=5)
+        # Plotting area
+        self.plot_canvas_frame = ttk.Frame(self.plotter_frame)
+        self.plot_canvas_frame.pack(fill="both", expand=True, padx=20, pady=5)
 
     # def display_plot(self) :
     #     try :
