@@ -106,8 +106,6 @@ else :
         
         data_dict['time'].append(t + i*3600)
 
-        print(f'Spectrogram {i+1} done.')
-
     for key in data_dict.keys() :
         data_dict[key] = np.concatenate(data_dict[key], axis=0)
     
