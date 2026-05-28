@@ -8,13 +8,17 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 import datetime as dt
+import numpy as np
+import xarray as xr
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.widgets import Slider
 import re
 import subprocess
 import sys
 import threading
 import configparser
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import matplotlib.pyplot as plt
 
 
 class PRIDE_GUI() :
@@ -29,7 +33,7 @@ class PRIDE_GUI() :
         config.read("config.ini")
         self.raw_dir = tk.StringVar(value=config['visual_tool_settings']['raw_data_folder'])
         self.publishable_dir = tk.StringVar(value=config['visual_tool_settings']['netcdf_folder'])
-        self.specrogram_dir = tk.StringVar(value=config['visual_tool_settings']['spectrogram_folder'])
+        self.spectrogram_dir = tk.StringVar(value=config['visual_tool_settings']['spectrogram_folder'])
         self.start_date = tk.StringVar(value="14/12/2023")
         self.end_date = tk.StringVar(value="31/12/2023")
 
@@ -73,7 +77,7 @@ class PRIDE_GUI() :
         # Directory selector
         self.create_directory_selector(parent=self.converter_frame, label="Raw files Directory", variable=self.raw_dir)
         self.create_directory_selector(parent=self.converter_frame, label="Publishable netcdf files Directory", variable=self.publishable_dir)
-        self.create_directory_selector(parent=self.converter_frame, label="Spectrogram timeseries Directory", variable=self.specrogram_dir)
+        self.create_directory_selector(parent=self.converter_frame, label="Spectrogram timeseries Directory", variable=self.spectrogram_dir)
 
         # Dates selector
         dates_frame = ttk.Frame(self.converter_frame)
@@ -147,7 +151,7 @@ class PRIDE_GUI() :
             end_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_end_date), "%d/%m/%Y").date()
 
             origin_dir = self.publishable_dir.get()
-            destination_dir = self.specrogram_dir.get()
+            destination_dir = self.spectrogram_dir.get()
 
             if not Path(origin_dir).exists() :
                 raise Exception("Invalid publishable files directory")
@@ -200,23 +204,11 @@ class PRIDE_GUI() :
         title.pack(pady=15)
 
         # Directory selector
-        self.create_directory_selector(parent=self.plotter_frame, label="Data Directory", variable=self.specrogram_dir)
+        self.create_directory_selector(parent=self.plotter_frame, label="Spectrogram timeseries Directory", variable=self.spectrogram_dir)
 
         # Parameters 
         self.parameters_frame = ttk.Frame(self.plotter_frame)
         self.parameters_frame.pack(fill='x', padx=20, pady=5)
-
-        # Dates selector
-        dates_frame = ttk.Frame(self.parameters_frame)
-        dates_frame.grid(row=0, column=0, padx=20, pady=5)
-        ttk.Label(dates_frame, text="Start Date:").grid(row=0, column=0, padx=5, pady=5)
-        ttk.Entry(dates_frame, textvariable=self.start_date, width=20).grid(row=0, column=1, padx=5)
-        ttk.Label(dates_frame, text="DD/MM/YYYY format").grid(row=0, column=2, padx=5, pady=5)
-        
-        ttk.Separator(dates_frame, orient='horizontal').grid(row=0, column=3, padx=15)
-        ttk.Label(dates_frame, text="End Date:").grid(row=0, column=4, padx=5, pady=5)
-        ttk.Entry(dates_frame, textvariable=self.end_date, width=20).grid(row=0, column=5, padx=5)
-        ttk.Label(dates_frame, text="DD/MM/YYYY format").grid(row=0, column=6, padx=5, pady=5)
 
         # # Plotting mode selector
         # mode_frame = ttk.LabelFrame(self.parameters_frame, text="Plotting Mode")
@@ -229,60 +221,65 @@ class PRIDE_GUI() :
         # ttk.Radiobutton(mode_frame, text="SNR", variable=self.plot_type, value="p_l").grid(row=1, column=2, padx=5, pady=5)
         # ttk.Radiobutton(mode_frame, text="Spectral width", variable=self.plot_type, value="w_l").grid(row=1, column=3, padx=5, pady=5)
         # ttk.Radiobutton(mode_frame, text="Elevation angle", variable=self.plot_type, value="elv").grid(row=1, column=4, padx=5, pady=5)
-
+        
+        # Dates selector
+        dates_frame = ttk.Frame(self.parameters_frame)
+        dates_frame.grid(row=0, column=0, padx=20, pady=5)
+        ttk.Label(dates_frame, text="Start Date:").grid(row=0, column=0, padx=5, pady=5)
+        ttk.Entry(dates_frame, textvariable=self.start_date, width=20).grid(row=0, column=1, padx=5)
+        ttk.Label(dates_frame, text="DD/MM/YYYY format").grid(row=0, column=2, padx=5, pady=5)
+        
+        ttk.Separator(dates_frame, orient='horizontal').grid(row=0, column=3, padx=15)
+        ttk.Button(dates_frame, text="Previous day", command=lambda : self.update_start_date(dt.timedelta(days=-1))).grid(row=0, column=4, padx=5, pady=5)
+        ttk.Button(dates_frame, text="Next day", command=lambda : self.update_start_date(dt.timedelta(days=1))).grid(row=0, column=5, padx=5, pady=5)
+        
         # Plotting button
-        self.plot_button = ttk.Button(self.plotter_frame, text="Generate Plot", command=self.display_plot)
-        self.plot_button.pack(pady=5)
+        ttk.Separator(dates_frame, orient='horizontal').grid(row=0, column=6, padx=15)
+        self.plot_button = ttk.Button(dates_frame, text="Generate Plot", command=self.display_plot)
+        self.plot_button.grid(row=0, column=7, padx=5, pady=5)
         
         # Plotting area
         self.plot_canvas_frame = ttk.Frame(self.plotter_frame)
         self.plot_canvas_frame.pack(fill="both", expand=True, padx=20, pady=5)
+    
+    def update_start_date(self, time_delta) :
+        date = dt.datetime.strptime(self.start_date.get(), '%d/%m/%Y')
+        date += time_delta
+        self.start_date.set(date.strftime('%d/%m/%Y'))
 
-    # def display_plot(self) :
-    #     try :
-    #         self.plot_button.config(state="disabled")
+    def display_plot(self) :
+        try :
+            self.plot_button.config(state="disabled")
 
-    #         # Remove previous plot
-    #         for widget in self.plot_canvas_frame.winfo_children():
-    #             widget.destroy()
-    #         plt.clf()
+            # Remove previous plot
+            for widget in self.plot_canvas_frame.winfo_children():
+                widget.destroy()
+            plt.clf()
 
-    #         # Get parameters
-    #         plot_dir = self.fit_dir.get()
-    #         if not Path(plot_dir).exists() :
-    #             raise Exception("Invalid fit files directory")
+            # Get parameters
+            spectrogram_dir = self.spectrogram_dir.get()
+            if not Path(spectrogram_dir).exists() :
+                raise Exception("Invalid fit files directory")
 
-    #         raw_start_date = self.start_date.get()
-    #         raw_end_date = self.end_date.get()
-    #         start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%d/%m/%Y").date()
-    #         end_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_end_date), "%d/%m/%Y").date()
+            raw_start_date = self.start_date.get()
+            start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%d/%m/%Y")
 
-    #         plot_time = self.plot_time.get()
-    #         plot_type = self.plot_type.get()
-
-    #         # Read the data
-    #         if plot_time == "full_day" :
-    #             fitacf_data = read_fitacf3_entire_day(Path(plot_dir), start_date)
-    #         elif plot_time == "file_by_file" :
-    #             fitacf_list = list_fitacf3_files(Path(plot_dir), start_date)
-    #             if not fitacf_list :
-    #                 ttk.Label(self.plot_canvas_frame, text="No data for given date")
-    #                 return
-    #             fitacf_data = fitacf_list[0]
+            # Read the data
+            data_dict, plot_date = read_spectrogram_file(Path(spectrogram_dir), start_date)
+            # ttk.Label(self.plot_canvas_frame, text="No data for given date")
             
-    #         # Display the plot
-    #         fig = create_range_time_plot(fitacf_data=fitacf_data, dataset_nbr=1, parameter=plot_type)
+            # Display the plot
+            fig, ax = create_spectrogram_plot(data_dict, plot_date)
 
-    #         canvas = FigureCanvasTkAgg(fig, master=self.plot_canvas_frame)
-    #         canvas.draw()
-    #         canvas.get_tk_widget().pack(fill="both", expand=True)
-            
+            canvas = FigureCanvasTkAgg(fig, master=self.plot_canvas_frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(fill="both", expand=True)
 
-    #     except Exception as err :
-    #         messagebox.showerror("Error: ", str(err))
+        except Exception as err :
+            messagebox.showerror("Error: ", str(err))
 
-    #     finally :
-    #         self.plot_button.config(state="normal")
+        finally :
+            self.plot_button.config(state="normal")
 
     # ------------------------------------------------
     # General purpose functions
@@ -304,84 +301,71 @@ class PRIDE_GUI() :
             variable.set(dir)
 
 
-# # ------------------------------------------------
-# # Reading and plotting functions
-# def create_range_time_plot(fitacf_data, dataset_nbr:int, parameter:str) :
-#     if parameter == "summary" :
-#         pydarn.RTP.plot_summary(fitacf_data, 
-#                                 beam_num=fitacf_data[dataset_nbr]['bmnum'],
-#                                 range_estimation=pydarn.RangeEstimation.RANGE_GATE,
-#                                 date_fmt='%H:%M'
-#                                 )
-#         plt.title("Radar {:d}, Beam {:d}".format(fitacf_data[dataset_nbr]['stid'], fitacf_data[dataset_nbr]['bmnum']))
+# ------------------------------------------------
+# Reading and plotting functions
 
-#     elif parameter == 'v' :
-#         pydarn.RTP.plot_range_time(fitacf_data, parameter='v',
-#                                     beam_num=fitacf_data[dataset_nbr]['bmnum'], 
-#                                     range_estimation=pydarn.RangeEstimation.RANGE_GATE, 
-#                                     zmin=-500, zmax=500,
-#                                     colorbar_label='Line of sight velocity (m/s)',
-#                                     date_fmt='%H:%M'
-#                                     )
-#         plt.title("Radar {:d}, Beam {:d}".format(fitacf_data[dataset_nbr]['stid'], fitacf_data[dataset_nbr]['bmnum']))  
-#         plt.ylabel('Range gates')
-#         plt.xlabel('Time (UTC)')
+def read_spectrogram_file(spectrogram_dir:Path, date:dt.datetime) :
+    time_series_file = spectrogram_dir / f'test_PRIDE_spectrogram_{date.strftime('%Y%m%d')}.nc'
+    with xr.open_dataset(time_series_file, decode_cf=False) as timeseries_dataset :
+
+        data_dict = {}
+        data_dict['time'] = np.array(timeseries_dataset['time'])
+        data_dict['max_freq'] = np.array(timeseries_dataset['max_freq'])
+
+        plot_date_str = timeseries_dataset['time'].attrs['units'].split(' ')[2]
+        plot_date = dt.datetime.fromisoformat(plot_date_str)
+        data_dict['timestamps'] = np.array([plot_date + dt.timedelta(seconds=int(data_dict['time'][k])) for k in range(len(data_dict['time']))])
     
-#     elif parameter == "p_l" :
-#         pydarn.RTP.plot_range_time(fitacf_data, parameter='p_l',
-#                                     beam_num=fitacf_data[dataset_nbr]['bmnum'], 
-#                                     range_estimation=pydarn.RangeEstimation.RANGE_GATE,
-#                                     groundscatter=True,
-#                                     zmax=0, zmin=40,
-#                                     colorbar_label='Backscattered Power (dB)',
-#                                     date_fmt='%H:%M'
-#                                     )
-#         plt.title("Radar {:d}, Beam {:d}".format(fitacf_data[dataset_nbr]['stid'], fitacf_data[dataset_nbr]['bmnum']))  
-#         plt.ylabel('Range gates')
-#         plt.xlabel('Time (UTC)')
-    
-#     elif parameter == 'w_l' :
-#         pydarn.RTP.plot_range_time(fitacf_data, parameter='w_l', 
-#                                     beam_num=fitacf_data[dataset_nbr]['bmnum'], 
-#                                     range_estimation=pydarn.RangeEstimation.RANGE_GATE, 
-#                                     colorbar_label='Spectral width (m/s)',
-#                                     date_fmt='%H:%M'
-#                                     )
-#         plt.title("Radar {:d}, Beam {:d}".format(fitacf_data[dataset_nbr]['stid'], fitacf_data[dataset_nbr]['bmnum'])) 
-#         plt.ylabel('Range gates')
-#         plt.xlabel('Time (UTC)')
+    return data_dict, plot_date
 
-#     elif parameter == 'elv' :
-#         pydarn.RTP.plot_range_time(fitacf_data, parameter='elv',
-#                                     beam_num=fitacf_data[dataset_nbr]['bmnum'], 
-#                                     range_estimation=pydarn.RangeEstimation.RANGE_GATE, 
-#                                     colorbar_label='Elevation angle (deg)',
-#                                     date_fmt='%H:%M'
-#                                     )
-#         plt.title("Radar {:d}, Beam {:d}".format(fitacf_data[dataset_nbr]['stid'], fitacf_data[dataset_nbr]['bmnum'])) 
-#         plt.ylabel('Range gates')
-#         plt.xlabel('Time (UTC)')
-    
-#     return plt.gcf()
+def create_spectrogram_plot(data_dict, plot_date) :
+    fig, ax = plt.subplots(figsize=(18, 5))
+    plt.subplots_adjust(bottom=0.2)
 
-# def read_fitacf3_entire_day(fitacf_dir:Path, date:dt.datetime) :
-#     date_str = date.strftime('%Y%m%d')
-#     fitacf_files = list(fitacf_dir.glob(f'{date_str}.*.fitacf'))
-#     fitacf_files.sort()
+    x_data = data_dict['timestamps']
 
-#     concatenated_data = list()
-#     for file in fitacf_files :
-#         fitacf_data, _ = pydarn.read_fitacf(str(file))
-#         concatenated_data += fitacf_data
-    
-#     return concatenated_data
+    ax.plot(x_data, data_dict['max_freq'], linestyle='None', marker='+', markersize=4)
+    ax.set_xlim(x_data[0], x_data[-1])
+    ax.set_autoscale_on(False)
 
-# def list_fitacf3_files(fitacf_dir:Path, date:dt.datetime) :
-#     date_str = date.strftime('%Y%m%d')
-#     fitacf_files = list(fitacf_dir.glob(f'{date_str}.*.fitacf'))
-#     fitacf_files.sort()
+    ax.set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {plot_date.strftime('%Y/%m/%d')}")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Frequency of Maximum PSD (Hz)")
+    ax.grid(alpha=0.3)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
-#     return fitacf_files
+
+    # Slider definition and fig update 
+    window_width = dt.timedelta(hours=1)
+    ax_slider = plt.axes([0.1, 0.05, 0.8, 0.03])
+    slider = Slider(ax=ax_slider, label="Displayed hour", valmin=0, valmax=1, valinit=0)
+
+    def format_time(val) : 
+        return x_data[0] + val * (x_data[-1] - dt.timedelta(hours=1) - x_data[0])
+
+    slider.valtext.set_text(f"{format_time(slider.val).strftime('%H:%M')}")
+
+    def update(val) :
+        displayed_hour = format_time(slider.val)
+        ax.set_xlim(displayed_hour, displayed_hour + window_width)
+        slider.valtext.set_text(f"{displayed_hour.strftime('%H:%M')}")
+    slider.on_changed(update)
+
+    # Handling function for the mouse wheel
+    def on_scroll(event) :
+        if event.inaxes == ax_slider or event.inaxes == ax :
+            current_val = slider.val
+            step = 0.005
+            
+            if event.step < 0:
+                new_val = min(current_val + step, slider.valmax)
+            else:
+                new_val = max(current_val - step, slider.valmin)
+                
+            slider.set_val(new_val)
+    fig.canvas.mpl_connect('scroll_event', on_scroll)
+
+    return fig, ax
 
 
 # ------------------------------------------------
