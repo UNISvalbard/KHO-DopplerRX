@@ -2,6 +2,8 @@
 Visual tool for converting the files, creating spectrograms, and plotting them.
 
 Code taken from the SuperDARN visual tool and modified to fit the needs for this project
+
+Requires spectrogram_netcdf.py and netcdf-metadata.py to be in the same folder
 """
 
 import tkinter as tk
@@ -11,7 +13,7 @@ import datetime as dt
 import numpy as np
 import xarray as xr
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 from matplotlib.widgets import Slider
 import re
@@ -254,7 +256,6 @@ class PRIDE_GUI() :
             # Remove previous plot
             for widget in self.plot_canvas_frame.winfo_children():
                 widget.destroy()
-            plt.clf()
 
             # Get parameters
             spectrogram_dir = self.spectrogram_dir.get()
@@ -319,8 +320,10 @@ def read_spectrogram_file(spectrogram_dir:Path, date:dt.datetime) :
     return data_dict, plot_date
 
 def create_spectrogram_plot(data_dict, plot_date) :
-    fig, ax = plt.subplots(figsize=(18, 5))
-    plt.subplots_adjust(bottom=0.2)
+    # Avoid using matplotlib.pyplot as it prevents tkinter window from closing
+    fig = Figure(figsize=(18, 5))
+    ax = fig.add_subplot()
+    fig.subplots_adjust(bottom=0.2)
 
     x_data = data_dict['timestamps']
 
@@ -337,7 +340,7 @@ def create_spectrogram_plot(data_dict, plot_date) :
 
     # Slider definition and fig update 
     window_width = dt.timedelta(hours=1)
-    ax_slider = plt.axes([0.1, 0.05, 0.8, 0.03])
+    ax_slider = fig.add_axes(rect=(0.1, 0.05, 0.8, 0.03))
     slider = Slider(ax=ax_slider, label="Displayed hour", valmin=0, valmax=1, valinit=0)
 
     def format_time(val) : 
@@ -374,5 +377,3 @@ if __name__ == "__main__" :
     root = tk.Tk()
     app = PRIDE_GUI(root)
     root.mainloop()
-
-
