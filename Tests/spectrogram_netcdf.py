@@ -81,10 +81,17 @@ else :
         raw_timestamps = raw_timestamps[order]  # One gets funny looking spectrograms if the
         samples_IQ = samples_IQ[order]  # samples are not in temporal order...
         sample_frequency = 100
+    
+    # complex frequency mixing to shift the signal down by -25Hz and add a low pass filter to get 
+    # rid of frequencies we aren't interested in
+    f_LO = -25
+    y_LO = np.exp(1j * 2 * np.pi * f_LO * raw_timestamps) 
+    b, a = ss.butter(4, 20 / (sample_frequency / 2), btype='low')
+    mixed_IQ = samples_IQ * y_LO
 
 
     # ------------------------------------------------
-    # Run spectrogram + extract peaks of the unfiltered data
+    # Run spectrogram + extract peaks of the filtered data
 
     data_dict = {}
     data_dict['max_freq'] = []
@@ -94,7 +101,8 @@ else :
     for i in range(24) :
         hour_selector = (raw_timestamps >= raw_timestamps[0] + i*3600) & (raw_timestamps < raw_timestamps[0] + (i + 1)*3600)
 
-        f, t, Sxx = ss.spectrogram(samples_IQ[hour_selector], sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
+        filtered_IQ = ss.filtfilt(b, a, mixed_IQ[hour_selector])
+        f, t, Sxx = ss.spectrogram(filtered_IQ, sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
 
         # Convert to dB and normalize so strongest point is 0 dB
         Syy = 10 * np.log10(Sxx.squeeze())
