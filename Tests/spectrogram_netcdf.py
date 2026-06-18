@@ -86,7 +86,7 @@ else :
     # rid of frequencies we aren't interested in
     f_LO = -25
     y_LO = np.exp(1j * 2 * np.pi * f_LO * raw_timestamps) 
-    b, a = ss.butter(4, 20 / (sample_frequency / 2), btype='low')
+    sos = ss.butter(4, 20/(sample_frequency/2), btype='low', output='sos')
     mixed_IQ = samples_IQ * y_LO
 
 
@@ -101,7 +101,7 @@ else :
     for i in range(24) :
         hour_selector = (raw_timestamps >= raw_timestamps[0] + i*3600) & (raw_timestamps < raw_timestamps[0] + (i + 1)*3600)
 
-        filtered_IQ = ss.filtfilt(b, a, mixed_IQ[hour_selector])
+        filtered_IQ = ss.sosfilt(sos, mixed_IQ[hour_selector])
         f, t, Sxx = ss.spectrogram(filtered_IQ, sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
 
         # Convert to dB and normalize so strongest point is 0 dB
@@ -135,7 +135,7 @@ else :
     prideds = xr.Dataset()
 
     # Time series
-    prideds = xr.Dataset(coords={'time': data_dict['time']})
+    prideds = xr.Dataset(coords={'time': data_dict['time'].astype(int)})
     prideds['max_freq'] = ("time", data_dict['max_freq'])
 
     # Metadata
