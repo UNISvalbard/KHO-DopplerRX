@@ -96,17 +96,25 @@ else :
     data_dict = {}
     data_dict['max_freq'] = []
     data_dict['time'] = []
+    # data_dict['Syy_shifted'] = []
+    # data_dict['time_freq_coordinates'] = []
 
     # Split the process in 24 hours to avoid computer explosion
     for i in range(24) :
         hour_selector = (raw_timestamps >= raw_timestamps[0] + i*3600) & (raw_timestamps < raw_timestamps[0] + (i + 1)*3600)
 
         filtered_IQ = ss.sosfilt(sos, mixed_IQ[hour_selector])
-        f, t, Sxx = ss.spectrogram(filtered_IQ, sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
+        window = 
+        stfft = ss.ShortTimeFFT(window, hop=1, fs=sample_frequency, fft_mode='twosided', scale_to='psd')
+        f, t, Sxx = stfft.spectrogram(filtered_IQ, sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
 
         # Convert to dB and normalize so strongest point is 0 dB
         Syy = 10 * np.log10(Sxx.squeeze())
         Syy = Syy - np.max(Syy)
+
+        # # Attempt at saving the spectrogram
+        # data_dict['Syy_shifted'].append(fftshift(Syy, axes=0).transpose())
+        # data_dict['time_freq_coordinates'].append(np.array(np.meshgrid(t, fftshift(f))).transpose())
 
         # Find frequency where max occurs for each time bin
         max_index = np.argmax(Syy, axis=0)
