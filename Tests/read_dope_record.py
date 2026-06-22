@@ -14,7 +14,11 @@ from numpy.fft import fftshift
 
 def plot_spectrogram(x, fs, titletext=""):
     """Given a complex signal, plot its two-sided spectrogram"""
-    f, t, Sxx = ss.spectrogram(x, fs, return_onesided=False)
+    STF = ss.ShortTimeFFT.from_window('hann', fs=fs, nperseg=256, noverlap=32, fft_mode='twosided', mfft=4096, scale_to='psd')
+    f = STF.f
+    t = STF.t(len(x))
+    Sxx = STF.spectrogram(x)
+
     Syy = 10*np.log10(Sxx.squeeze())
     plt.pcolormesh(t, fftshift(f), fftshift(Syy, axes=0))
     plt.xlabel('t (s)')
@@ -41,7 +45,7 @@ def main():
     filetimestamp = npzfile['timestamp']
     samples = npzfile['samples']
 
-    mytimestamp = datetime.fromtimestamp(filetimestamp))
+    mytimestamp = datetime.fromtimestamp(filetimestamp)
     print(mytimestamp)
     plot_spectrogram(samples, fs, mytimestamp.strftime("%Y-%m-%dT%H:%M:%S"))
 

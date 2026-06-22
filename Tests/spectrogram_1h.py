@@ -36,9 +36,10 @@ samples (we'll use 4096). Let's try 50% overlap...
 def plot_spectrogram(timestamps, samples_IQ, sample_frequency):
     """Given a complex signal, plot its two-sided spectrogram"""
 
-    f, t, Sxx = ss.spectrogram(samples_IQ, sample_frequency, "hann",
-                               nfft=4096, return_onesided=False,
-                               scaling="spectrum")
+    STF = ss.ShortTimeFFT.from_window('hann', fs=sample_frequency, nperseg=256, noverlap=32, fft_mode='twosided', mfft=4096, scale_to='psd')
+    f = STF.f
+    t = STF.t(len(samples_IQ))
+    Sxx = STF.spectrogram(samples_IQ)
     
   #  fmin=15 #Hz, note that there is an offset between RX centre freq
   #  fmax=30 #to go around the DC component...
@@ -71,10 +72,10 @@ def parse_args():
 
 
 def plot_max_psd_vs_time(ts, x, fs):
-    f, t, Sxx = ss.spectrogram(x, fs, "hann",
-                               nfft=4096,
-                               return_onesided=False,
-                               scaling="spectrum")
+    STF = ss.ShortTimeFFT.from_window('hann', fs=fs, nperseg=256, noverlap=32, fft_mode='twosided', mfft=4096, scale_to='psd')
+    f = STF.f
+    t = STF.t(len(x))
+    Sxx = STF.spectrogram(x)
 
     # Convert to dB
     Syy = 10 * np.log10(Sxx.squeeze())
