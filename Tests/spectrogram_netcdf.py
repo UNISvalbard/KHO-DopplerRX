@@ -56,7 +56,9 @@ if args.read_timeseries :
 
         data_dict = {}
         data_dict['time'] = np.array(timeseries_dataset['time'])
+        data_dict['freq'] = np.array(timeseries_dataset['frequency'])
         data_dict['max_freq'] = np.array(timeseries_dataset['max_freq'])
+        data_dict['Syy_shifted'] = np.array(timeseries_dataset['Syy_shifted'])
 
         start_date_str = timeseries_dataset['time'].attrs['units'].split(' ')[2]
         start_date = dt.datetime.fromisoformat(start_date_str)
@@ -84,7 +86,7 @@ else :
     
     # complex frequency mixing to shift the signal down by -25Hz and add a low pass filter to get 
     # rid of frequencies we aren't interested in
-    f_LO = -25
+    f_LO = -23
     y_LO = np.exp(1j * 2 * np.pi * f_LO * raw_timestamps) 
     sos = ss.butter(4, 20/(sample_frequency/2), btype='low', output='sos')
     mixed_IQ = samples_IQ * y_LO
@@ -96,31 +98,27 @@ else :
     data_dict = {}
     data_dict['max_freq'] = []
     data_dict['time'] = []
-    # data_dict['Syy_shifted'] = []
-    # data_dict['time_freq_coordinates'] = []
+    data_dict['Syy_shifted'] = []
+
+    STF = ss.ShortTimeFFT.from_window('hann', fs=sample_frequency, nperseg=256, noverlap=32, fft_mode='twosided', mfft=4096, scale_to='psd')
+    f = STF.f
 
     # Split the process in 24 hours to avoid computer explosion
     for i in range(24) :
         hour_selector = (raw_timestamps >= raw_timestamps[0] + i*3600) & (raw_timestamps < raw_timestamps[0] + (i + 1)*3600)
         filtered_IQ = ss.sosfilt(sos, mixed_IQ[hour_selector])
         
-        STF = ss.ShortTimeFFT.from_window('hann', fs=sample_frequency, nperseg=256, noverlap=32, fft_mode='twosided', mfft=4096, scale_to='psd')
-        f = STF.f
         t = STF.t(len(filtered_IQ))
         Sxx = STF.spectrogram(filtered_IQ)
 
         # Convert to dB and normalize so strongest point is 0 dB
         Syy = 10 * np.log10(Sxx.squeeze())
         Syy = Syy - np.max(Syy)
-
-        # # Attempt at saving the spectrogram
-        # data_dict['Syy_shifted'].append(fftshift(Syy, axes=0).transpose())
-        # data_dict['time_freq_coordinates'].append(np.array(np.meshgrid(t, fftshift(f))).transpose())
+        data_dict['Syy_shifted'].append(fftshift(Syy, axes=0).transpose())
 
         # Find frequency where max occurs for each time bin
         max_index = np.argmax(Syy, axis=0)
         data_dict['max_freq'].append(f[max_index])
-        
         data_dict['time'].append(t + i*3600)
 
     for key in data_dict.keys() :
@@ -135,16 +133,19 @@ else :
         if e - s >= 2 :
             data_dict['max_freq'][s:e] = np.nan
 
+    data_dict['freq'] = np.array(f)
     data_dict['timestamps'] = np.array([start_date + dt.timedelta(seconds=int(data_dict['time'][k])) for k in range(len(data_dict['time']))])
+    data_dict['Syy_shifted'] = data_dict['Syy_shifted'].transpose()
 
 
     # ------------------------------------------------
     # Create the dataset, add metadata and save it to netcdf file
 
-    prideds = xr.Dataset()
-
     # Time series
-    prideds = xr.Dataset(coords={'time': data_dict['time'].astype(int)})
+    prideds = xr.Dataset(coords={'time': data_dict['time'].astype(int), 
+                                 'frequency': data_dict['freq']})
+    
+    prideds['Syy_shifted'] = (['frequency', 'time'], data_dict['Syy_shifted'])
     prideds['max_freq'] = ("time", data_dict['max_freq'])
 
     # Metadata
@@ -156,8 +157,22 @@ else :
         'coverage_content_type': 'coordinate'
     }
 
+    prideds['frequency'].attrs = {
+        'standard_name':'frequency',
+        'long_name': 'frequency',
+        'units': f'Hertz',
+        'calendar': 'standard',
+        'coverage_content_type': 'coordinate'
+    }
+
+    prideds['Syy_shifted'].attrs = {
+        'long_name': 'Spectrogram power',
+        'units': 'dB',
+        'coverage_content_type': 'physicalMeasurement'
+    }
+
     prideds['max_freq'].attrs = {
-        'long_name': 'Maximum frequency',
+        'long_name': 'Frequency of maximum power',
         'units': 'Hz',
         'coverage_content_type': 'physicalMeasurement'
     }
@@ -170,10 +185,18 @@ else :
             'dtype': 'int64',
             '_FillValue': None  # Coordinate variables should not have fill values.
         },
-        'max_freq': {
+        'frequency':{
             'dtype': 'float64',
             '_FillValue': None
         },
+        'Syy_shifted':{
+            'dtype': 'float64',
+            '_FillValue': None
+        },
+        'max_freq': {
+            'dtype': 'float64',
+            '_FillValue': None
+        }
     }
 
     prideds.to_netcdf(time_series_file, encoding=encoding)
@@ -183,20 +206,28 @@ else :
 # Plot the obtained data
 
 if args.plot_spectrogram :
-    fig, ax = plt.subplots(figsize=(18, 5))
+    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(18, 5))
     plt.subplots_adjust(bottom=0.2)
 
     x_data = data_dict['timestamps']
 
-    ax.plot(x_data, data_dict['max_freq'], linestyle='None', marker='+', markersize=4)
-    ax.set_xlim(x_data[0], x_data[-1])
-    ax.set_autoscale_on(False)
+    # Spectrogram plot
+    mesh = ax[0].pcolormesh(x_data, data_dict['freq'], data_dict['Syy_shifted'], vmin=-80, rasterized=True)
+    colorbar = fig.colorbar(mesh, ax[0])
+    colorbar.set_label('Received power')
+    ax[0].set_title(f'Spectrogram')
+    ax[0].set_ylabel('Frequency (Hz)')
 
-    ax.set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Frequency of Maximum PSD (Hz)")
-    ax.grid(alpha=0.3)
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+    # Max PSD plot
+    ax[1].plot(x_data, data_dict['max_freq'], linestyle='None', marker='+', markersize=4)
+    ax[1].set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}")
+    ax[1].set_ylabel("Frequency of Maximum PSD (Hz)")
+    ax[1].grid(alpha=0.3)
+
+    ax[1].set_xlabel("Time")
+    ax[1].set_xlim(x_data[0], x_data[-1])
+    ax[1].set_autoscale_on(False)
+    ax[1].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
 
     # Slider definition and fig update 
