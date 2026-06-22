@@ -102,11 +102,12 @@ else :
     # Split the process in 24 hours to avoid computer explosion
     for i in range(24) :
         hour_selector = (raw_timestamps >= raw_timestamps[0] + i*3600) & (raw_timestamps < raw_timestamps[0] + (i + 1)*3600)
-
         filtered_IQ = ss.sosfilt(sos, mixed_IQ[hour_selector])
-        window = 
-        stfft = ss.ShortTimeFFT(window, hop=1, fs=sample_frequency, fft_mode='twosided', scale_to='psd')
-        f, t, Sxx = stfft.spectrogram(filtered_IQ, sample_frequency, "hann", nfft=4096, return_onesided=False, scaling="spectrum")
+        
+        STF = ss.ShortTimeFFT.from_window('hann', fs=sample_frequency, nperseg=256, noverlap=32, fft_mode='twosided', mfft=4096, scale_to='psd')
+        f = STF.f
+        t = STF.t(len(filtered_IQ))
+        Sxx = STF.spectrogram(filtered_IQ)
 
         # Convert to dB and normalize so strongest point is 0 dB
         Syy = 10 * np.log10(Sxx.squeeze())
