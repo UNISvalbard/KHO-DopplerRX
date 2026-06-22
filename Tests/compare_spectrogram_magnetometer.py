@@ -16,8 +16,8 @@ magnetometer_folder = Path(config['compare_spectrogram']['magnetometer_folder'])
 str_date = config['spectrogram_netcdf-settings']['date']
 
 
-date = dt.datetime(year=2023, month=12, day=19, hour=10)
-duration = dt.timedelta(hours=2)
+date = dt.datetime(year=2023, month=12, day=22, hour=12)
+duration = dt.timedelta(hours=3)
 
 
 
@@ -95,7 +95,7 @@ def low_filter(freq_data, norm_data, min_freq):
     filter_data = (freq_data > min_freq)
     return (freq_data[filter_data], norm_data[filter_data])
 
-min_freq = 0.005
+min_freq = 0.0001
 
 freq_spectro, norm_spectro = low_filter(freq_spectro, norm_spectro, min_freq)
 freq_magneto_x, norm_magneto_x = low_filter(freq_magneto_x, norm_magneto_x, min_freq)
@@ -112,7 +112,7 @@ plt.xlabel("Frequency (Hz)")
 plt.ylabel("Amplitude")
 plt.legend()
 plt.grid(True)
-plt.xlim(0, max(freq_spectro.max(), freq_magneto_x.max(), freq_magneto_y.max()))
-# plt.xlim(0, 0.01)
+# plt.xlim(0, max(freq_spectro.max(), freq_magneto_x.max(), freq_magneto_y.max()))
+plt.xlim(0, 0.025)
 plt.title(f'{date.strftime('%Y/%m/%d')}')
 plt.show()
