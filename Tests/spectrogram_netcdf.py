@@ -62,7 +62,6 @@ if args.read_timeseries :
 
         start_date_str = timeseries_dataset['time'].attrs['units'].split(' ')[2]
         start_date = dt.datetime.fromisoformat(start_date_str)
-        data_dict['timestamps'] = np.array([start_date + dt.timedelta(seconds=int(data_dict['time'][k])) for k in range(len(data_dict['time']))])
 
 
 # ------------------------------------------------
@@ -84,46 +83,42 @@ else :
         samples_IQ = samples_IQ[order]  # samples are not in temporal order...
         sample_frequency = 100
     
-    # complex frequency mixing to shift the signal down by -25Hz and add a low pass filter to get 
-    # rid of frequencies we aren't interested in
-    f_LO = -23
-    y_LO = np.exp(1j * 2 * np.pi * f_LO * raw_timestamps) 
-    sos = ss.butter(4, 20/(sample_frequency/2), btype='low', output='sos')
-    mixed_IQ = samples_IQ * y_LO
-
 
     # ------------------------------------------------
     # Run spectrogram + extract peaks of the filtered data
 
     data_dict = {}
-    data_dict['max_freq'] = []
-    data_dict['time'] = []
-    data_dict['Syy_shifted'] = []
+    
+    # complex frequency mixing to shift the signal down by -25Hz and add a low pass filter to get 
+    # rid of frequencies we aren't interested in
+    f_LO = -23
+    y_LO = np.exp(1j * 2 * np.pi * f_LO * raw_timestamps) 
+    mixed_IQ = samples_IQ * y_LO
+
+    sos = ss.butter(4, 20/(sample_frequency/2), btype='low', output='sos')
+    filtered_IQ = ss.sosfilt(sos, mixed_IQ)
+
+    # Run spectrogram
 
     STF = ss.ShortTimeFFT.from_window('hann', fs=sample_frequency, nperseg=256, noverlap=32, fft_mode='twosided', mfft=4096, scale_to='psd')
-    f = STF.f
-
-    # Split the process in 24 hours to avoid computer explosion
-    for i in range(24) :
-        hour_selector = (raw_timestamps >= raw_timestamps[0] + i*3600) & (raw_timestamps < raw_timestamps[0] + (i + 1)*3600)
-        filtered_IQ = ss.sosfilt(sos, mixed_IQ[hour_selector])
-        
-        t = STF.t(len(filtered_IQ))
-        Sxx = STF.spectrogram(filtered_IQ)
-
-        # Convert to dB and normalize so strongest point is 0 dB
-        Syy = 10 * np.log10(Sxx.squeeze())
-        Syy = Syy - np.max(Syy)
-        data_dict['Syy_shifted'].append(fftshift(Syy, axes=0).transpose())
-
-        # Find frequency where max occurs for each time bin
-        max_index = np.argmax(Syy, axis=0)
-        data_dict['max_freq'].append(f[max_index])
-        data_dict['time'].append(t + i*3600)
-
-    for key in data_dict.keys() :
-        data_dict[key] = np.concatenate(data_dict[key], axis=0)
     
+    f = STF.f
+    data_dict['freq'] = np.array(f)
+
+    t = STF.t(len(filtered_IQ))
+    data_dict['time'] = np.array(t)
+
+    Sxx = STF.spectrogram(filtered_IQ)
+    # Convert to dB and normalize so strongest point is 0 dB
+    Syy = 10 * np.log10(Sxx.squeeze())
+    Syy = Syy - np.max(Syy)
+    data_dict['Syy_shifted'] = np.array(fftshift(Syy, axes=0))
+
+    # Find frequency where max occurs for each time bin
+    max_index = np.argmax(Syy, axis=0)
+    data_dict['max_freq'] = np.array(f[max_index])
+
+
     # Replace sequences of 0 originating from missing data with NaNs
     zeros_filter = (data_dict['max_freq'] == 0)
     diff = np.diff(np.concatenate(([0], zeros_filter, [0])))
@@ -132,10 +127,6 @@ else :
     for s, e in zip(sequence_starts, sequence_ends) :
         if e - s >= 2 :
             data_dict['max_freq'][s:e] = np.nan
-
-    data_dict['freq'] = np.array(f)
-    data_dict['timestamps'] = np.array([start_date + dt.timedelta(seconds=int(data_dict['time'][k])) for k in range(len(data_dict['time']))])
-    data_dict['Syy_shifted'] = data_dict['Syy_shifted'].transpose()
 
 
     # ------------------------------------------------
@@ -182,7 +173,7 @@ else :
 
     encoding = {
         'time': {
-            'dtype': 'int64',
+            'dtype': 'float64',
             '_FillValue': None  # Coordinate variables should not have fill values.
         },
         'frequency':{
@@ -206,14 +197,16 @@ else :
 # Plot the obtained data
 
 if args.plot_spectrogram :
-    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(18, 5))
+    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(16, 5))
     plt.subplots_adjust(bottom=0.2)
 
+    data_dict['timestamps'] = np.array([start_date + dt.timedelta(milliseconds=int(data_dict['time'][k]*1000)) for k in range(len(data_dict['time']))])
     x_data = data_dict['timestamps']
 
     # Spectrogram plot
-    mesh = ax[0].pcolormesh(x_data, data_dict['freq'], data_dict['Syy_shifted'], vmin=-80, rasterized=True)
-    colorbar = fig.colorbar(mesh, ax[0])
+    # spectro = ax[0].pcolorfast(x_data, data_dict['freq'], data_dict['Syy_shifted'][:-1, :-1], vmin=-80)
+    spectro = ax[0].imshow(data_dict['Syy_shifted'], origin='lower', aspect='auto', extent=[x_data.min(), x_data.max(), data_dict['freq'].min(), data_dict['freq'].max()], vmin=-80)
+    colorbar = fig.colorbar(spectro, ax[0])
     colorbar.set_label('Received power')
     ax[0].set_title(f'Spectrogram')
     ax[0].set_ylabel('Frequency (Hz)')
@@ -242,13 +235,13 @@ if args.plot_spectrogram :
 
     def update(val) :
         displayed_hour = format_time(slider.val)
-        ax.set_xlim(displayed_hour, displayed_hour + window_width)
+        ax[1].set_xlim(displayed_hour, displayed_hour + window_width)
         slider.valtext.set_text(f"{displayed_hour.strftime('%H:%M')}")
     slider.on_changed(update)
 
     # Handling function for the mouse wheel
     def on_scroll(event) :
-        if event.inaxes == ax_slider or event.inaxes == ax :
+        if event.inaxes == ax_slider or event.inaxes in ax :
             current_val = slider.val
             step = 0.005
             
