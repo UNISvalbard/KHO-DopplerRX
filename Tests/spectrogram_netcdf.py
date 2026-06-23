@@ -197,22 +197,25 @@ else :
 # Plot the obtained data
 
 if args.plot_spectrogram :
-    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(16, 5))
+    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(15, 5))
     plt.subplots_adjust(bottom=0.2)
 
+    decimation_factor = 16
+
     data_dict['timestamps'] = np.array([start_date + dt.timedelta(milliseconds=int(data_dict['time'][k]*1000)) for k in range(len(data_dict['time']))])
-    x_data = data_dict['timestamps']
+    x_data = data_dict['timestamps'][::decimation_factor]
+
+    # Initial plots and legends
 
     # Spectrogram plot
-    # spectro = ax[0].pcolorfast(x_data, data_dict['freq'], data_dict['Syy_shifted'][:-1, :-1], vmin=-80)
-    spectro = ax[0].imshow(data_dict['Syy_shifted'], origin='lower', aspect='auto', extent=[x_data.min(), x_data.max(), data_dict['freq'].min(), data_dict['freq'].max()], vmin=-80)
+    spectro = ax[0].pcolormesh(x_data, fftshift(data_dict['freq'][::4]), data_dict['Syy_shifted'][::4, ::decimation_factor], vmin=data_dict['freq'].min(), vmax=data_dict['freq'].max(), rasterized=True)
     colorbar = fig.colorbar(spectro, ax[0])
     colorbar.set_label('Received power')
     ax[0].set_title(f'Spectrogram')
     ax[0].set_ylabel('Frequency (Hz)')
 
     # Max PSD plot
-    ax[1].plot(x_data, data_dict['max_freq'], linestyle='None', marker='+', markersize=4)
+    ax[1].plot(x_data, data_dict['max_freq'][::decimation_factor], linestyle='None', marker='+', markersize=4)
     ax[1].set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}")
     ax[1].set_ylabel("Frequency of Maximum PSD (Hz)")
     ax[1].grid(alpha=0.3)
@@ -230,7 +233,6 @@ if args.plot_spectrogram :
 
     def format_time(val) : 
         return x_data[0] + val * (x_data[-1] - dt.timedelta(hours=1) - x_data[0])
-
     slider.valtext.set_text(f"{format_time(slider.val).strftime('%H:%M')}")
 
     def update(val) :
