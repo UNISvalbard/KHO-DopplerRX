@@ -36,7 +36,7 @@ class PRIDE_GUI() :
         self.raw_dir = tk.StringVar(value=config['visual_tool_settings']['raw_data_folder'])
         self.publishable_dir = tk.StringVar(value=config['visual_tool_settings']['netcdf_folder'])
         self.spectrogram_dir = tk.StringVar(value=config['visual_tool_settings']['spectrogram_folder'])
-        self.start_date = tk.StringVar(value="14/12/2023")
+        self.start_date = tk.StringVar(value="15/12/2023")
         self.end_date = tk.StringVar(value="31/12/2023")
 
         # Define layout
@@ -312,6 +312,8 @@ def read_spectrogram_file(spectrogram_dir:Path, date:dt.datetime) :
         data_dict = {}
         data_dict['time'] = np.array(timeseries_dataset['time'])
         data_dict['max_freq'] = np.array(timeseries_dataset['max_freq'])
+        data_dict['freq'] = np.array(timeseries_dataset['frequency'])
+        data_dict['Syy_shifted'] = np.array(timeseries_dataset['Syy_shifted'])
 
         plot_date_str = timeseries_dataset['time'].attrs['units'].split(' ')[2]
         plot_date = dt.datetime.fromisoformat(plot_date_str)
@@ -320,22 +322,41 @@ def read_spectrogram_file(spectrogram_dir:Path, date:dt.datetime) :
     return data_dict, plot_date
 
 def create_spectrogram_plot(data_dict, plot_date) :
+    # Unpack data 
+    time = data_dict['timestamps']
+    frequency = data_dict['freq']
+    max_psd = data_dict['max_freq']
+    syy = data_dict['Syy_shifted']
+
+    f_decim = 4
+    t_decim = 16
+
     # Avoid using matplotlib.pyplot as it prevents tkinter window from closing
     fig = Figure(figsize=(18, 5))
-    ax = fig.add_subplot()
+    ax0 = fig.add_subplot(2, 1, 1)
+    ax1 = fig.add_subplot(2, 1, 2)
     fig.subplots_adjust(bottom=0.2)
 
-    x_data = data_dict['timestamps']
+    # Spectrogram plot
+    spectrogram = ax0.imshow(syy[::f_decim, ::t_decim], 
+                             aspect='auto', origin='lower', interpolation='nearest')
+    # colorbar = fig.colorbar(spectrogram)
+    # colorbar.set_label('Received power')
+    ax0.set_title(f'Spectrogram')
+    ax0.set_ylabel('Frequency (Hz)')
+    ax0.get_xaxis().set_visible(False)
 
-    ax.plot(x_data, data_dict['max_freq'], linestyle='None', marker='+', markersize=4)
-    ax.set_xlim(x_data[0], x_data[-1])
-    ax.set_autoscale_on(False)
+    # Maximum PSD plot
+    psd_plot, = ax1.plot(time[::t_decim], max_psd[::t_decim], linestyle='None', marker='+', markersize=4)
+    ax1.set_xlim(time[0], time[-1])
+    ax1.set_autoscale_on(False)
 
-    ax.set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {plot_date.strftime('%Y/%m/%d')}")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Frequency of Maximum PSD (Hz)")
-    ax.grid(alpha=0.3)
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+    ax1.set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {plot_date.strftime('%Y/%m/%d')}")
+    ax1.set_ylabel("Frequency of Maximum PSD (Hz)")
+    ax1.grid(alpha=0.3)
+
+    ax1.set_xlabel("Time")
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
 
     # Slider definition and fig update 
@@ -344,19 +365,29 @@ def create_spectrogram_plot(data_dict, plot_date) :
     slider = Slider(ax=ax_slider, label="Displayed hour", valmin=0, valmax=1, valinit=0)
 
     def format_time(val) : 
-        return x_data[0] + val * (x_data[-1] - dt.timedelta(hours=1) - x_data[0])
+        return time[0] + val * (time[-1] - dt.timedelta(hours=1) - time[0])
 
     slider.valtext.set_text(f"{format_time(slider.val).strftime('%H:%M')}")
 
+
+    # Update function
     def update(val) :
-        displayed_hour = format_time(slider.val)
-        ax.set_xlim(displayed_hour, displayed_hour + window_width)
-        slider.valtext.set_text(f"{displayed_hour.strftime('%H:%M')}")
+        start_display = format_time(slider.val)
+        end_display = start_display + window_width
+        time_filter = (time >= start_display) & (time < end_display)
+
+        # Filter and decimate the data
+        spectrogram.set_data(syy[:, time_filter][::f_decim, ::2])
+        psd_plot.set_data(time[time_filter], max_psd[time_filter])
+
+        ax1.set_xlim(start_display, end_display)
+        slider.valtext.set_text(f"{start_display.strftime('%H:%M')}")
     slider.on_changed(update)
+
 
     # Handling function for the mouse wheel
     def on_scroll(event) :
-        if event.inaxes == ax_slider or event.inaxes == ax :
+        if event.inaxes == ax_slider or event.inaxes in (ax0, ax1) :
             current_val = slider.val
             step = 0.005
             
@@ -368,7 +399,9 @@ def create_spectrogram_plot(data_dict, plot_date) :
             slider.set_val(new_val)
     fig.canvas.mpl_connect('scroll_event', on_scroll)
 
-    return fig, ax
+    # fig.tight_layout()
+
+    return fig, (ax0, ax1)
 
 
 # ------------------------------------------------
