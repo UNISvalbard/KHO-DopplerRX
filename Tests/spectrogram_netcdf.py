@@ -197,25 +197,28 @@ else :
 # Plot the obtained data
 
 if args.plot_spectrogram :
-    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(15, 5))
+    fig, ax = plt.subplots(2, 1, sharex=False, figsize=(15, 5))
     plt.subplots_adjust(bottom=0.2)
 
     decimation_factor = 16
 
     data_dict['timestamps'] = np.array([start_date + dt.timedelta(milliseconds=int(data_dict['time'][k]*1000)) for k in range(len(data_dict['time']))])
-    x_data = data_dict['timestamps'][::decimation_factor]
+    x_data = data_dict['timestamps']
 
     # Initial plots and legends
 
     # Spectrogram plot
-    spectro = ax[0].pcolormesh(x_data, fftshift(data_dict['freq'][::4]), data_dict['Syy_shifted'][::4, ::decimation_factor], vmin=data_dict['freq'].min(), vmax=data_dict['freq'].max(), rasterized=True)
-    colorbar = fig.colorbar(spectro, ax[0])
-    colorbar.set_label('Received power')
+    spectro = ax[0].imshow(data_dict['Syy_shifted'][::4, ::decimation_factor], aspect='auto', origin='lower', interpolation='nearest',
+                           extent = [0, len(data_dict['Syy_shifted'][::4, ::decimation_factor][0]),
+                                     data_dict['freq'].min(), data_dict['freq'].max()])
+    # colorbar = fig.colorbar(spectro, ax[0])
+    # colorbar.set_label('Received power')
     ax[0].set_title(f'Spectrogram')
     ax[0].set_ylabel('Frequency (Hz)')
+    
 
     # Max PSD plot
-    ax[1].plot(x_data, data_dict['max_freq'][::decimation_factor], linestyle='None', marker='+', markersize=4)
+    psd, = ax[1].plot(x_data[::decimation_factor], data_dict['max_freq'][::decimation_factor], linestyle='None', marker='+', markersize=4)
     ax[1].set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}")
     ax[1].set_ylabel("Frequency of Maximum PSD (Hz)")
     ax[1].grid(alpha=0.3)
@@ -224,9 +227,9 @@ if args.plot_spectrogram :
     ax[1].set_xlim(x_data[0], x_data[-1])
     ax[1].set_autoscale_on(False)
     ax[1].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-
-
-    # Slider definition and fig update 
+ 
+ 
+    # Slider definition
     window_width = dt.timedelta(hours=1)
     ax_slider = plt.axes([0.1, 0.05, 0.8, 0.03])
     slider = Slider(ax=ax_slider, label="Displayed hour", valmin=0, valmax=1, valinit=0)
@@ -235,10 +238,18 @@ if args.plot_spectrogram :
         return x_data[0] + val * (x_data[-1] - dt.timedelta(hours=1) - x_data[0])
     slider.valtext.set_text(f"{format_time(slider.val).strftime('%H:%M')}")
 
+
+    # Update function
     def update(val) :
-        displayed_hour = format_time(slider.val)
-        ax[1].set_xlim(displayed_hour, displayed_hour + window_width)
-        slider.valtext.set_text(f"{displayed_hour.strftime('%H:%M')}")
+        start_display = format_time(slider.val)
+        end_display = start_display + window_width
+        time_filter = (x_data >= start_display) & (x_data < end_display)
+
+        spectro.set_data(data_dict['Syy_shifted'][:, time_filter][::4, ::decimation_factor])
+        psd.set_data(x_data[time_filter], data_dict['max_freq'][time_filter])
+
+        ax[1].set_xlim(start_display, end_display)
+        slider.valtext.set_text(f"{start_display.strftime('%H:%M')}")
     slider.on_changed(update)
 
     # Handling function for the mouse wheel
@@ -255,4 +266,5 @@ if args.plot_spectrogram :
             slider.set_val(new_val)
     fig.canvas.mpl_connect('scroll_event', on_scroll)
 
+    plt.tight_layout()
     plt.show()
