@@ -39,6 +39,7 @@ class PRIDE_GUI() :
         self.spectrogram_dir = tk.StringVar(value=config['visual_tool_settings']['spectrogram_folder'])
         self.start_date = tk.StringVar(value="15/12/2023")
         self.end_date = tk.StringVar(value="31/12/2023")
+        self.freq_boundary = tk.StringVar(value='10')
 
         # Define layout
         self.create_navigation()
@@ -236,10 +237,16 @@ class PRIDE_GUI() :
         ttk.Button(dates_frame, text="Previous day", command=lambda : self.update_start_date(dt.timedelta(days=-1))).grid(row=0, column=4, padx=5, pady=5)
         ttk.Button(dates_frame, text="Next day", command=lambda : self.update_start_date(dt.timedelta(days=1))).grid(row=0, column=5, padx=5, pady=5)
         
-        # Plotting button
+        # Frequency boundary
         ttk.Separator(dates_frame, orient='horizontal').grid(row=0, column=6, padx=15)
+        ttk.Label(dates_frame, text='Frequency boundary:').grid(row=0, column=7, padx=5, pady=5)
+        ttk.Entry(dates_frame, textvariable=self.freq_boundary, width=20).grid(row=0, column=8, padx=5)
+        ttk.Label(dates_frame, text="Hz").grid(row=0, column=9, padx=5, pady=5)
+
+        # Plotting button
+        ttk.Separator(dates_frame, orient='horizontal').grid(row=0, column=10, padx=15)
         self.plot_button = ttk.Button(dates_frame, text="Generate Plot", command=self.display_plot)
-        self.plot_button.grid(row=0, column=7, padx=5, pady=5)
+        self.plot_button.grid(row=0, column=11, padx=5, pady=5)
         
         # Plotting area
         self.plot_canvas_frame = ttk.Frame(self.plotter_frame)
@@ -271,7 +278,7 @@ class PRIDE_GUI() :
             # ttk.Label(self.plot_canvas_frame, text="No data for given date")
             
             # Display the plot
-            fig, ax = create_spectrogram_plot(data_dict, plot_date)
+            fig, ax = create_spectrogram_plot(data_dict, plot_date, freq_boundary=int(self.freq_boundary.get()))
 
             canvas = FigureCanvasTkAgg(fig, master=self.plot_canvas_frame)
             canvas.draw()
@@ -322,7 +329,7 @@ def read_spectrogram_file(spectrogram_dir:Path, date:dt.datetime) :
     
     return data_dict, plot_date
 
-def create_spectrogram_plot(data_dict, plot_date) :
+def create_spectrogram_plot(data_dict, plot_date, freq_boundary) :
     # Unpack data 
     data_dict['timestamps'] = np.array([plot_date + dt.timedelta(milliseconds=int(data_dict['time'][k]*1000)) for k in range(len(data_dict['time']))])
     time = data_dict['timestamps']
@@ -331,7 +338,6 @@ def create_spectrogram_plot(data_dict, plot_date) :
     syy = data_dict['Syy_shifted']
 
     # Spectrogram limits, decimation factors
-    freq_boundary = 10
     freq_limits = (abs(frequency) <= freq_boundary)
     frequency = frequency[freq_limits]
     syy_filtered = syy[freq_limits, :]
