@@ -278,7 +278,7 @@ class PRIDE_GUI() :
             # ttk.Label(self.plot_canvas_frame, text="No data for given date")
             
             # Display the plot
-            fig, ax = create_spectrogram_plot(data_dict, plot_date, freq_boundary=int(self.freq_boundary.get()))
+            fig, ax = create_spectrogram_plot(data_dict, plot_date, freq_boundary=float(self.freq_boundary.get()))
 
             canvas = FigureCanvasTkAgg(fig, master=self.plot_canvas_frame)
             canvas.draw()

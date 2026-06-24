@@ -92,7 +92,7 @@ else :
     
     # complex frequency mixing to shift the signal down by -25Hz and add a low pass filter to get 
     # rid of frequencies we aren't interested in
-    f_LO = -23
+    f_LO = -22
     y_LO = np.exp(1j * 2 * np.pi * f_LO * raw_timestamps) 
     mixed_IQ = samples_IQ * y_LO
 
