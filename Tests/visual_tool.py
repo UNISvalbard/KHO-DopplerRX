@@ -340,11 +340,11 @@ def create_spectrogram_plot(data_dict, plot_date, freq_boundary) :
     # Spectrogram limits, decimation factors
     freq_limits = (abs(frequency) <= freq_boundary)
     frequency = frequency[freq_limits]
-    syy_filtered = syy[freq_limits, :]
-    syy_max = np.percentile(syy_filtered, 99.5)
+    syy_limited = syy[freq_limits, :]
+    syy_max = np.percentile(syy_limited, 99.5)
     
-    f_decim = 4
-    t_decim = 16
+    f_ddfactor = 2
+    t_ddfactor = 2
 
     # Avoid using matplotlib.pyplot as it prevents tkinter window from closing
     # Axes definition
@@ -359,7 +359,7 @@ def create_spectrogram_plot(data_dict, plot_date, freq_boundary) :
     fig.subplots_adjust(bottom=0.2)
 
     # Spectrogram plot
-    spectrogram = ax0.imshow(syy_filtered[::f_decim, ::t_decim], 
+    spectrogram = ax0.imshow(syy_limited[::f_ddfactor, ::t_ddfactor], 
                              aspect='auto', origin='lower', interpolation='nearest',
                              vmin=syy_max-30, vmax=syy_max,
                              cmap='viridis')
@@ -369,7 +369,7 @@ def create_spectrogram_plot(data_dict, plot_date, freq_boundary) :
     colorbar.set_label('Received power (dB)')
 
     # Maximum PSD plot
-    psd_plot, = ax1.plot(time[::t_decim], max_psd[::t_decim], linestyle='None', marker='+', markersize=4)
+    psd_plot, = ax1.plot(time[::t_ddfactor], max_psd[::t_ddfactor], linestyle='None', marker='+', markersize=4)
     
     ax1.set_xlim(time[0], time[-1])
     ax1.set_ylim(-freq_boundary, freq_boundary)
@@ -399,7 +399,7 @@ def create_spectrogram_plot(data_dict, plot_date, freq_boundary) :
     update_ticks(axis=1)
 
 
-    # Slider definition
+    # Slider definition and fig update 
     window_width = dt.timedelta(hours=1)
     slider = Slider(ax=ax_slider, label="Displayed hour", valmin=0, valmax=1, valinit=0)
 
@@ -415,8 +415,8 @@ def create_spectrogram_plot(data_dict, plot_date, freq_boundary) :
         end_display = start_display + window_width
         time_filter = (time >= start_display) & (time < end_display)
 
-        # Filter and decimate the data
-        spectrogram.set_data(syy_filtered[:, time_filter][::f_decim, ::2])
+        # Filter and downsample the displayed data
+        spectrogram.set_data(syy_limited[:, time_filter][::f_ddfactor, :])
         psd_plot.set_data(time[time_filter], max_psd[time_filter])
 
         ax1.set_xlim(start_display, end_display)
