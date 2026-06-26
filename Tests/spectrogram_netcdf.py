@@ -90,17 +90,21 @@ else :
 
     data_dict = {}
     
-    # complex frequency mixing to shift the signal down by -25Hz and add a low pass filter to get 
-    # rid of frequencies we aren't interested in
+    # complex frequency mixing to shift the signal down, and decimate for getting clean data
     f_LO = -22
     y_LO = np.exp(1j * 2 * np.pi * f_LO * raw_timestamps) 
     mixed_IQ = samples_IQ * y_LO
 
-    sos = ss.butter(4, 15, btype='low', fs=sample_frequency, output='sos')
-    filtered_IQ = ss.sosfilt(sos, mixed_IQ)
+    # sos = ss.butter(10, 2, btype='low', fs=sample_frequency, output='sos')
+    # filtered_IQ = ss.sosfilt(sos, mixed_IQ)
+
+    decimated_IQ = ss.decimate(mixed_IQ, 10)
+
+    sos = ss.butter(10, 2, btype='low', fs=sample_frequency/10, output='sos')
+    filtered_IQ = ss.sosfilt(sos, decimated_IQ)
 
     # Run spectrogram
-    STF = ss.ShortTimeFFT.from_window('hann', fs=sample_frequency, nperseg=256, noverlap=32, fft_mode='twosided', mfft=4096, scale_to='psd')
+    STF = ss.ShortTimeFFT.from_window('hann', fs=sample_frequency/10, nperseg=256, noverlap=32, fft_mode='twosided', mfft=4096, scale_to='psd')
     
     f = STF.f
     data_dict['freq'] = np.array(fftshift(f))
@@ -204,15 +208,15 @@ if args.plot_spectrogram :
     max_psd = data_dict['max_freq']
     syy = data_dict['Syy_shifted']
 
-    # Spectrogram limits, decimation factors
-    freq_boundary = 10
+    # Spectrogram limits, display downsampling factors
+    freq_boundary = 3
     freq_limits = (abs(frequency) <= freq_boundary)
     frequency = frequency[freq_limits]
-    syy_filtered = syy[freq_limits, :]
-    syy_max = np.percentile(syy_filtered, 99.5)
+    syy_limited = syy[freq_limits, :]
+    syy_max = np.percentile(syy_limited, 99.5)
     
-    f_decim = 4
-    t_decim = 16
+    f_ddfactor = 2
+    t_ddfactor = 2
 
     # Avoid using matplotlib.pyplot as it prevents tkinter window from closing
     # Axes definition
@@ -227,7 +231,7 @@ if args.plot_spectrogram :
     fig.subplots_adjust(bottom=0.2)
 
     # Spectrogram plot
-    spectrogram = ax0.imshow(syy_filtered[::f_decim, ::t_decim], 
+    spectrogram = ax0.imshow(syy_limited[::f_ddfactor, ::t_ddfactor], 
                              aspect='auto', origin='lower', interpolation='nearest',
                              vmin=syy_max-30, vmax=syy_max,
                              cmap='viridis')
@@ -237,7 +241,7 @@ if args.plot_spectrogram :
     colorbar.set_label('Received power (dB)')
 
     # Maximum PSD plot
-    psd_plot, = ax1.plot(time[::t_decim], max_psd[::t_decim], linestyle='None', marker='+', markersize=4)
+    psd_plot, = ax1.plot(time[::t_ddfactor], max_psd[::t_ddfactor], linestyle='None', marker='+', markersize=4)
     
     ax1.set_xlim(time[0], time[-1])
     ax1.set_ylim(-freq_boundary, freq_boundary)
@@ -250,7 +254,7 @@ if args.plot_spectrogram :
     ax1.set_xlabel("Time")
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
-    print(ax1.get_xticks())
+
     # Update spectrogram ticks to match that of psd plot
     def update_ticks(axis=0) :
         if axis == 0 :
@@ -283,8 +287,8 @@ if args.plot_spectrogram :
         end_display = start_display + window_width
         time_filter = (time >= start_display) & (time < end_display)
 
-        # Filter and decimate the data
-        spectrogram.set_data(syy_filtered[:, time_filter][::f_decim, ::2])
+        # Filter and downsample the displayed data
+        spectrogram.set_data(syy_limited[:, time_filter][::f_ddfactor, :])
         psd_plot.set_data(time[time_filter], max_psd[time_filter])
 
         ax1.set_xlim(start_display, end_display)
