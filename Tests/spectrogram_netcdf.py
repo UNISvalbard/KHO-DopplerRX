@@ -7,12 +7,22 @@ This script is based on existing code found in spectrogram_1h.py and netcdf-meta
 
 Default comportment :
 This script takes in a raw 24h PRIDE netcdf file and creates a spectrogram.
-This results in a time series which is then refined and saved in a netcdf file.
+This results in a time series netcdf file, containing both the spectrogram and the maximum 
+power spectral density (max psd).
+N.B.: This default comportment is called in the visual_tool.py script.
+
+How to use :
+This script requires the presence of a config.ini file in the same directory, containing 
+the directories where the data is or should be saved. These are: raw_data_folder and
+destination_folder, the former containing the .nc files obtained via the netcdf-metadata.py script,
+and the latter where the new .nc timeseries should be saved. A default date argument is also
+provided
 
 Flags :
 -p : This is used to plot the spectrogram in a 24h format.
--r : This is used to read an existing time series instead of reading the rawdata and computing the spectrogram again. 
+-r : This is used to read an existing time series instead of computing the spectrogram again from raw data. 
      N.B.: this flag should be used alongside the -p flag, otherwise nothing happens
+-d : Lets you choose the date to be analysed (syntax: -d=2023/12/17)
 """
 
 import scipy.signal as ss
@@ -94,9 +104,6 @@ else :
     f_LO = -22
     y_LO = np.exp(1j * 2 * np.pi * f_LO * raw_timestamps) 
     mixed_IQ = samples_IQ * y_LO
-
-    # sos = ss.butter(10, 2, btype='low', fs=sample_frequency, output='sos')
-    # filtered_IQ = ss.sosfilt(sos, mixed_IQ)
 
     decimated_IQ = ss.decimate(mixed_IQ, 10)
 
