@@ -37,8 +37,8 @@ class PRIDE_GUI() :
         self.raw_dir = tk.StringVar(value=config['visual_tool_settings']['raw_data_folder'])
         self.publishable_dir = tk.StringVar(value=config['visual_tool_settings']['netcdf_folder'])
         self.spectrogram_dir = tk.StringVar(value=config['visual_tool_settings']['spectrogram_folder'])
-        self.start_date = tk.StringVar(value="15/12/2023")
-        self.end_date = tk.StringVar(value="31/12/2023")
+        self.start_date = tk.StringVar(value="2023/12/15")
+        self.end_date = tk.StringVar(value="2023/12/31")
         self.freq_boundary = tk.StringVar(value='10')
 
         # Define layout
@@ -88,11 +88,11 @@ class PRIDE_GUI() :
         dates_frame.pack(fill="x", padx=20, pady=15)
         ttk.Label(dates_frame, text="Start Date:").grid(row=0, column=0, padx=5, pady=5)
         ttk.Entry(dates_frame, textvariable=self.start_date, width=20).grid(row=0, column=1, padx=5)
-        ttk.Label(dates_frame, text="DD/MM/YYYY format").grid(row=0, column=2, padx=5, pady=5)
+        ttk.Label(dates_frame, text="YYYY/MM/DD format").grid(row=0, column=2, padx=5, pady=5)
         
         ttk.Label(dates_frame, text="End Date:").grid(row=1, column=0, padx=5, pady=5)
         ttk.Entry(dates_frame, textvariable=self.end_date, width=20).grid(row=1, column=1, padx=5)
-        ttk.Label(dates_frame, text="DD/MM/YYYY format").grid(row=1, column=2, padx=5, pady=5)
+        ttk.Label(dates_frame, text="YYYY/MM/DD format").grid(row=1, column=2, padx=5, pady=5)
 
         # Convert button
         button_frame = ttk.Frame(self.converter_frame)
@@ -117,8 +117,8 @@ class PRIDE_GUI() :
             # Retreive the given dates and directories
             raw_start_date = self.start_date.get()
             raw_end_date = self.end_date.get()
-            start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%d/%m/%Y").date()
-            end_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_end_date), "%d/%m/%Y").date()
+            start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%Y/%m/%d").date()
+            end_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_end_date), "%Y/%m/%d").date()
 
             origin_dir = self.raw_dir.get()
             destination_dir = self.publishable_dir.get()
@@ -151,8 +151,8 @@ class PRIDE_GUI() :
             # Retreive the given dates and directories
             raw_start_date = self.start_date.get()
             raw_end_date = self.end_date.get()
-            start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%d/%m/%Y").date()
-            end_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_end_date), "%d/%m/%Y").date()
+            start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%Y/%m/%d").date()
+            end_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_end_date), "%Y/%m/%d").date()
 
             origin_dir = self.publishable_dir.get()
             destination_dir = self.spectrogram_dir.get()
@@ -231,7 +231,7 @@ class PRIDE_GUI() :
         dates_frame.grid(row=0, column=0, padx=20, pady=5)
         ttk.Label(dates_frame, text="Start Date:").grid(row=0, column=0, padx=5, pady=5)
         ttk.Entry(dates_frame, textvariable=self.start_date, width=20).grid(row=0, column=1, padx=5)
-        ttk.Label(dates_frame, text="DD/MM/YYYY format").grid(row=0, column=2, padx=5, pady=5)
+        ttk.Label(dates_frame, text="YYYY/MM/DD format").grid(row=0, column=2, padx=5, pady=5)
         
         ttk.Separator(dates_frame, orient='horizontal').grid(row=0, column=3, padx=15)
         ttk.Button(dates_frame, text="Previous day", command=lambda : self.update_start_date(dt.timedelta(days=-1))).grid(row=0, column=4, padx=5, pady=5)
@@ -253,9 +253,9 @@ class PRIDE_GUI() :
         self.plot_canvas_frame.pack(fill="both", expand=True, padx=20, pady=5)
     
     def update_start_date(self, time_delta) :
-        date = dt.datetime.strptime(self.start_date.get(), '%d/%m/%Y')
+        date = dt.datetime.strptime(self.start_date.get(), '%Y/%m/%d')
         date += time_delta
-        self.start_date.set(date.strftime('%d/%m/%Y'))
+        self.start_date.set(date.strftime('%Y/%m/%d'))
 
     def display_plot(self) :
         try :
@@ -271,7 +271,7 @@ class PRIDE_GUI() :
                 raise Exception("Invalid fit files directory")
 
             raw_start_date = self.start_date.get()
-            start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%d/%m/%Y")
+            start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%Y/%m/%d")
 
             # Read the data
             data_dict, plot_date = read_spectrogram_file(Path(spectrogram_dir), start_date)
