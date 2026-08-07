@@ -357,6 +357,7 @@ def create_spectrogram_plot(data_dict, plot_date, freq_boundary) :
     ax_slider = ax_container.inset_axes((0.1, 0.2, 0.8, 0.6)) # ax for slider
     ax_container.axis('off')
     fig.subplots_adjust(bottom=0.2)
+    fig.suptitle(f'PRIDE data time-frequency analysis - {plot_date.strftime('%Y/%m/%d')}')
 
     # Spectrogram plot
     spectrogram = ax0.imshow(syy_limited[::f_ddfactor, ::t_ddfactor], 
@@ -375,11 +376,11 @@ def create_spectrogram_plot(data_dict, plot_date, freq_boundary) :
     ax1.set_ylim(-freq_boundary, freq_boundary)
     ax1.set_autoscale_on(False)
 
-    ax1.set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {plot_date.strftime('%Y/%m/%d')}")
-    ax1.set_ylabel("Frequency of Maximum PSD (Hz)")
+    ax1.set_title(f"Frequency of maximum power spectral density (PSD)")
+    ax1.set_ylabel("Frequency (Hz)")
     ax1.grid(alpha=0.3)
 
-    ax1.set_xlabel("Time")
+    ax1.set_xlabel("Time (shared axis)")
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
 

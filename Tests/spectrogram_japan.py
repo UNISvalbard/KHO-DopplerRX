@@ -269,7 +269,7 @@ if program_type == 'japan' :
 	plt.rcParams["font.family"]="arial"
 	plt.rcParams["xtick.direction"]="in"
 	plt.rcParams["ytick.direction"]="in"
-	plt.savefig(plotfilename)
+	# plt.savefig(plotfilename)
 	plt.show()
 
 
@@ -343,6 +343,7 @@ elif program_type == 'svalbard' :
 	ax_slider = ax_container.inset_axes((0.1, 0.2, 0.8, 0.6)) # ax for slider
 	ax_container.axis('off')
 	fig.subplots_adjust(bottom=0.2)
+	fig.suptitle(f'HFDOPE data time-frequency analysis with UNIS code - {start_date.strftime('%Y/%m/%d')}')
 
 	# Spectrogram plot
 	spectrogram = ax0.imshow(syy_limited[::f_ddfactor, ::t_ddfactor], 
@@ -361,11 +362,11 @@ elif program_type == 'svalbard' :
 	ax1.set_ylim(-freq_boundary, freq_boundary)
 	ax1.set_autoscale_on(False)
 
-	ax1.set_title(f"Frequency of Strongest Peak vs Time - filtered and downshifted - {start_date.strftime('%Y/%m/%d')}")
-	ax1.set_ylabel("Frequency of Maximum PSD (Hz)")
+	ax1.set_title(f"Frequency of maximum power spectral density (PSD)")
+	ax1.set_ylabel("Frequency (Hz)")
 	ax1.grid(alpha=0.3)
 
-	ax1.set_xlabel("Time")
+	ax1.set_xlabel("Time (shared axis)")
 	ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
 
