@@ -44,9 +44,9 @@ import configparser
 
 config = configparser.ConfigParser()
 config.read('config.ini')
-raw_data_folder = Path(config['spectrogram_netcdf-settings']['raw_data_folder'])
-destination_folder = Path(config['spectrogram_netcdf-settings']['destination_folder'])
-str_date = config['spectrogram_netcdf-settings']['date']
+raw_data_folder = Path(config['visual_tool_settings']['netcdf_folder'])
+destination_folder = Path(config['visual_tool_settings']['spectrogram_folder'])
+str_date = config['visual_tool_settings']['date']
 
 parser = argparse.ArgumentParser(description="Test spectrogram")
 parser.add_argument("-p", "--plot-spectrogram", default=False, action=argparse.BooleanOptionalAction)

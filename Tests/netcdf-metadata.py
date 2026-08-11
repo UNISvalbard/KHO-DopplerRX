@@ -33,9 +33,9 @@ import datetime as dt
 # Read config for testing
 config = configparser.ConfigParser()
 config.read("config.ini")
-data_path = Path(config['netcdf-metadata-settings']['raw_data_folder'])
-str_date = config['netcdf-metadata-settings']['date'], '%Y/%m/%d'
-destination_path = Path(config['netcdf-metadata-settings']['destination_folder'])
+data_path = Path(config['visual_tool_settings']['raw_data_folder'])
+str_date = config['visual_tool_settings']['date']
+destination_path = Path(config['visual_tool_settings']['netcdf_folder'])
 
 parser = argparse.ArgumentParser(description="File converter hdf5 to netcdf with metadata")
 parser.add_argument("-d", "--date", default=str_date)
