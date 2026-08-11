@@ -13,10 +13,10 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 spectrogram_folder = Path(config['compare_spectrogram']['spectrogram_folder'])
 magnetometer_folder = Path(config['compare_spectrogram']['magnetometer_folder'])
-str_date = config['spectrogram_netcdf-settings']['date']
+str_date = config['visual_tool_settings']['date']
 
 
-date = dt.datetime(year=2023, month=12, day=17, hour=18)
+date = dt.datetime(year=2024, month=7, day=20, hour=22)
 duration = dt.timedelta(hours=2)
 
 
