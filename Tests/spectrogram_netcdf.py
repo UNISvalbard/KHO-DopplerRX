@@ -3,7 +3,7 @@ Created on Thu May 21
 
 @author: Olivier
 
-This script is based on existing code found in spectrogram_1h.py and netcdf-metadata.py
+This script is based on existing code found in spectrogram_1h.py and metadata_netcdf.py
 
 Default comportment :
 This script takes in a raw 24h PRIDE netcdf file and creates a spectrogram.
@@ -14,7 +14,7 @@ N.B.: This default comportment is called in the visual_tool.py script.
 How to use :
 This script requires the presence of a config.ini file in the same directory, containing 
 the directories where the data is or should be saved. These are: publishables_folder and
-spectrograms_folder, the former containing the .nc files obtained via the netcdf-metadata.py script,
+spectrograms_folder, the former containing the .nc files obtained via the metadata_netcdf.py script,
 and the latter where the new .nc timeseries should be saved. A default date argument is also
 provided
 

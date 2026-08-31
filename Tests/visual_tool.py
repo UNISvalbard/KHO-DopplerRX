@@ -3,7 +3,7 @@ Visual tool for converting the files, creating spectrograms, and plotting them.
 
 Code taken from the SuperDARN visual tool and modified to fit the needs for this project
 
-Requires spectrogram_netcdf.py and netcdf-metadata.py to be in the same folder
+Requires spectrogram_netcdf.py and metadata_netcdf.py to be in the same folder
 """
 
 import tkinter as tk
@@ -109,7 +109,7 @@ class PRIDE_GUI() :
     def create_publishable_files(self) :
         """
         Creates netcdf files with metadata from raw data from the Doppler Radar.
-        All the data recorder between the given start_date and end_date will be converted using the netcdf-metadata.py script.
+        All the data recorder between the given start_date and end_date will be converted using the metadata_netcdf.py script.
         """
         try :
             self.create_publishable_button.config(state="disabled")
@@ -183,7 +183,7 @@ class PRIDE_GUI() :
             working_date = start_date
             nbr_files_converted = 0
             if mode == 'publishable':
-                script = 'netcdf-metadata.py'
+                script = 'metadata_netcdf.py'
             elif mode == 'spectrogram':
                 script = 'spectrogram_netcdf.py'
             while working_date <= end_date :
