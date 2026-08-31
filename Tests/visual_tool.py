@@ -34,12 +34,12 @@ class PRIDE_GUI() :
         # Define variables
         config = configparser.ConfigParser()
         config.read("config.ini")
-        self.raw_dir = tk.StringVar(value=config['visual_tool_settings']['raw_data_folder'])
-        self.publishable_dir = tk.StringVar(value=config['visual_tool_settings']['netcdf_folder'])
-        self.spectrogram_dir = tk.StringVar(value=config['visual_tool_settings']['spectrogram_folder'])
-        self.start_date = tk.StringVar(value="2023/12/15")
-        self.end_date = tk.StringVar(value="2023/12/31")
-        self.freq_boundary = tk.StringVar(value='10')
+        self.raw_data_folder = tk.StringVar(value=config['directories']['raw_data_folder'])
+        self.publishables_folder = tk.StringVar(value=config['directories']['publishables_folder'])
+        self.spectrograms_folder = tk.StringVar(value=config['directories']['spectrograms_folder'])
+        self.start_date = tk.StringVar(value=config['settings']['start_date'])
+        self.end_date = tk.StringVar(value=config['settings']['end_date'])
+        self.freq_boundary = tk.StringVar(value=config['settings']['freq_boundary'])
 
         # Define layout
         self.create_navigation()
@@ -79,9 +79,9 @@ class PRIDE_GUI() :
         title.pack(pady=20)
 
         # Directory selector
-        self.create_directory_selector(parent=self.converter_frame, label="Raw files Directory", variable=self.raw_dir)
-        self.create_directory_selector(parent=self.converter_frame, label="Publishable netcdf files Directory", variable=self.publishable_dir)
-        self.create_directory_selector(parent=self.converter_frame, label="Spectrogram timeseries Directory", variable=self.spectrogram_dir)
+        self.create_directory_selector(parent=self.converter_frame, label="Raw files Directory", variable=self.raw_data_folder)
+        self.create_directory_selector(parent=self.converter_frame, label="Publishable netcdf files Directory", variable=self.publishables_folder)
+        self.create_directory_selector(parent=self.converter_frame, label="Spectrogram timeseries Directory", variable=self.spectrograms_folder)
 
         # Dates selector
         dates_frame = ttk.Frame(self.converter_frame)
@@ -120,13 +120,15 @@ class PRIDE_GUI() :
             start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%Y/%m/%d").date()
             end_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_end_date), "%Y/%m/%d").date()
 
-            origin_dir = self.raw_dir.get()
-            destination_dir = self.publishable_dir.get()
+            origin_dir = self.raw_data_folder.get()
+            destination_dir = self.publishables_folder.get()
 
             if not Path(origin_dir).exists() :
                 raise Exception("Invalid raw files directory")
             if not Path(destination_dir).exists() :
                 raise Exception("Invalid publishable files directory")
+
+            self.update_config()
 
             # Start conversion
             self.conversion_status.config(text="Conversion running...")
@@ -154,13 +156,15 @@ class PRIDE_GUI() :
             start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%Y/%m/%d").date()
             end_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_end_date), "%Y/%m/%d").date()
 
-            origin_dir = self.publishable_dir.get()
-            destination_dir = self.spectrogram_dir.get()
+            origin_dir = self.publishables_folder.get()
+            destination_dir = self.spectrograms_folder.get()
 
             if not Path(origin_dir).exists() :
                 raise Exception("Invalid publishable files directory")
             if not Path(destination_dir).exists() :
                 raise Exception("Invalid spectrogram files directory")
+
+            self.update_config()
 
             # Start conversion
             self.conversion_status.config(text="Conversion running...")
@@ -208,7 +212,7 @@ class PRIDE_GUI() :
         title.pack(pady=15)
 
         # Directory selector
-        self.create_directory_selector(parent=self.plotter_frame, label="Spectrogram timeseries Directory", variable=self.spectrogram_dir)
+        self.create_directory_selector(parent=self.plotter_frame, label="Spectrogram timeseries Directory", variable=self.spectrograms_folder)
 
         # Parameters 
         self.parameters_frame = ttk.Frame(self.plotter_frame)
@@ -256,6 +260,15 @@ class PRIDE_GUI() :
         date = dt.datetime.strptime(self.start_date.get(), '%Y/%m/%d')
         date += time_delta
         self.start_date.set(date.strftime('%Y/%m/%d'))
+        if dt.datetime.strptime(self.end_date.get(), '%Y/%m/%d') < date :
+            self.end_date.set(date.strftime('%Y/%m/%d'))
+
+    def update_end_date(self, time_delta) :
+            date = dt.datetime.strptime(self.end_date.get(), '%Y/%m/%d')
+            date += time_delta
+            self.end_date.set(date.strftime('%Y/%m/%d'))
+            if dt.datetime.strptime(self.start_date.get(), '%Y/%m/%d') > date :
+                self.start_date.set(date.strftime('%Y/%m/%d'))
 
     def display_plot(self) :
         try :
@@ -266,15 +279,15 @@ class PRIDE_GUI() :
                 widget.destroy()
 
             # Get parameters
-            spectrogram_dir = self.spectrogram_dir.get()
-            if not Path(spectrogram_dir).exists() :
+            spectrograms_folder = self.spectrograms_folder.get()
+            if not Path(spectrograms_folder).exists() :
                 raise Exception("Invalid fit files directory")
 
             raw_start_date = self.start_date.get()
             start_date = dt.datetime.strptime(re.sub(r'[-./]', '/', raw_start_date), "%Y/%m/%d")
 
             # Read the data
-            data_dict, plot_date = read_spectrogram_file(Path(spectrogram_dir), start_date)
+            data_dict, plot_date = read_spectrogram_file(Path(spectrograms_folder), start_date)
             # ttk.Label(self.plot_canvas_frame, text="No data for given date")
             
             # Display the plot
@@ -309,12 +322,29 @@ class PRIDE_GUI() :
         if dir :
             variable.set(dir)
 
+    def update_config(self) :
+        config = configparser.ConfigParser()
+        config.read("config.ini")
+
+        config['directories']['raw_data_folder'] = self.raw_data_folder.get()
+        config['directories']['publishables_folder'] = self.publishables_folder.get()
+        config['directories']['spectrograms_folder'] = self.spectrograms_folder.get()
+        config['settings']['start_date'] = self.start_date.get()
+        config['settings']['end_date'] = self.end_date.get()
+        config['settings']['freq_boundary'] = self.freq_boundary.get()
+
+        # Overwrite config file
+        with open('config.ini', 'w') as config_file :
+            config.write(config_file)
+
+
 
 # ------------------------------------------------
 # Reading and plotting functions
 
-def read_spectrogram_file(spectrogram_dir:Path, date:dt.datetime) :
-    time_series_file = spectrogram_dir / f'test_PRIDE_spectrogram_{date.strftime('%Y%m%d')}.nc'
+# Could be moved in the class and accessed with self.read_spectrogram_file for cleaner code
+def read_spectrogram_file(spectrograms_folder:Path, date:dt.datetime) :
+    time_series_file = spectrograms_folder / f'test_PRIDE_spectrogram_{date.strftime('%Y%m%d')}.nc'
     with xr.open_dataset(time_series_file, decode_cf=False) as timeseries_dataset :
 
         data_dict = {}

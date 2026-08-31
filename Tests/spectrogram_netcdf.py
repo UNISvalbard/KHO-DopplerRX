@@ -13,8 +13,8 @@ N.B.: This default comportment is called in the visual_tool.py script.
 
 How to use :
 This script requires the presence of a config.ini file in the same directory, containing 
-the directories where the data is or should be saved. These are: raw_data_folder and
-destination_folder, the former containing the .nc files obtained via the netcdf-metadata.py script,
+the directories where the data is or should be saved. These are: publishables_folder and
+spectrograms_folder, the former containing the .nc files obtained via the netcdf-metadata.py script,
 and the latter where the new .nc timeseries should be saved. A default date argument is also
 provided
 
@@ -44,9 +44,10 @@ import configparser
 
 config = configparser.ConfigParser()
 config.read('config.ini')
-raw_data_folder = Path(config['visual_tool_settings']['netcdf_folder'])
-destination_folder = Path(config['visual_tool_settings']['spectrogram_folder'])
-str_date = config['visual_tool_settings']['date']
+publishables_folder = Path(config['directories']['publishables_folder'])
+spectrograms_folder = Path(config['directories']['spectrograms_folder'])
+str_date = config['settings']['start_date']
+freq_boundary = int(config['settings']['freq_boundary'])
 
 parser = argparse.ArgumentParser(description="Test spectrogram")
 parser.add_argument("-p", "--plot-spectrogram", default=False, action=argparse.BooleanOptionalAction)
@@ -62,7 +63,7 @@ date = dt.datetime.strptime(str_date, '%Y/%m/%d')
 # Read existing time-series if chosen to
 
 if args.read_timeseries :
-    time_series_file = destination_folder / f'test_PRIDE_spectrogram_{date.strftime('%Y%m%d')}.nc'
+    time_series_file = spectrograms_folder / f'test_PRIDE_spectrogram_{date.strftime('%Y%m%d')}.nc'
     with xr.open_dataset(time_series_file, decode_cf=False) as timeseries_dataset :
 
         data_dict = {}
@@ -79,7 +80,7 @@ if args.read_timeseries :
 # Read raw netcdf data file and create spectrogram timeseries (Default)
 
 else :
-    raw_data_file = raw_data_folder / f'test_PRIDE_{date.strftime('%Y%m%d')}.nc'
+    raw_data_file = publishables_folder / f'test_PRIDE_{date.strftime('%Y%m%d')}.nc'
     with xr.open_dataset(raw_data_file, decode_cf=False) as raw_dataset :
 
         ms_since_start = np.array(raw_dataset['time'])
@@ -180,7 +181,7 @@ else :
     }
 
     # Export to netcdf
-    time_series_file = destination_folder / f'test_PRIDE_spectrogram_{start_date.strftime('%Y%m%d')}.nc'
+    time_series_file = spectrograms_folder / f'test_PRIDE_spectrogram_{start_date.strftime('%Y%m%d')}.nc'
 
     encoding = {
         'time': {
@@ -216,7 +217,6 @@ if args.plot_spectrogram :
     syy = data_dict['Syy_shifted']
 
     # Spectrogram limits, display downsampling factors
-    freq_boundary = 3
     freq_limits = (abs(frequency) <= freq_boundary)
     frequency = frequency[freq_limits]
     syy_limited = syy[freq_limits, :]

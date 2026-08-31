@@ -13,7 +13,8 @@ The data is imported as a NumPy datafile. When using the spectrogram
 function, one should note that it returns a matrix that has "too many"
 dimensions, which produces an error with pcolormesh if not taken care of.
 
-
+To do:  - Modify code to use dt.time more extensivelly in selector for plotting (add possibility to use minutes in particular)
+        - Use adjacent data for fft (opening previous or following files can be necessary)
 """
 
 import scipy.signal as ss
@@ -110,7 +111,9 @@ def main():
     # filename = args.input_file
     config = configparser.ConfigParser()
     config.read('config.ini')
-    filename = Path(config['spectrogram_1h-settings']['file_to_read'])
+    publishables_folder = Path(config['directories']['publishables_folder'])
+    date = dt.datetime.strptime(config['settings']['start_date'], '%Y/%m/%d')
+    plotted_hour = dt.time.strptime(config['settings']['hour'], '%H:%M').hour
 
     # # To read hdf5 files
     # mydata = np.load(filename)
@@ -118,6 +121,7 @@ def main():
     # samples_IQ = mydata["iq"]
 
     # To read nc files
+    filename = publishables_folder / f'test_PRIDE_{date.strftime("%Y%m%d")}.nc'
     mydata = xr.open_dataset(filename, decode_cf=False)
 
     ms_since_start = np.array(mydata['time'])
@@ -126,9 +130,6 @@ def main():
 
     timestamps_24h = ms_since_start/1000 + start_timestamp
     samples_IQ_24h = np.array(mydata['samples_I'] + mydata['samples_Q'] * 1j)
-
-    # Select the data to a given hour and sort it
-    plotted_hour = 13
 
     selector = (timestamps_24h >= timestamps_24h[0] + plotted_hour*3600) & (timestamps_24h < timestamps_24h[0] + (plotted_hour + 1)*3600)
     timestamps = timestamps_24h[selector]

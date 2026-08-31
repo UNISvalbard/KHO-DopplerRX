@@ -11,20 +11,20 @@ import configparser
 
 config = configparser.ConfigParser()
 config.read('config.ini')
-spectrogram_folder = Path(config['compare_spectrogram']['spectrogram_folder'])
-magnetometer_folder = Path(config['compare_spectrogram']['magnetometer_folder'])
-str_date = config['visual_tool_settings']['date']
+spectrograms_folder = Path(config['directories']['spectrograms_folder'])
+magnetometers_folder = Path(config['directories']['magnetometers_folder'])
+date = dt.date.strptime(config['settings']['start_date'], "%Y/%m/%d")
+hour = dt.time.strptime(config['settings']['hour'], "%H:%M")
+duration = dt.timedelta(hours=int(config['settings']['duration']))
 
-
-date = dt.datetime(year=2024, month=7, day=20, hour=22)
-duration = dt.timedelta(hours=2)
+date = dt.datetime.combine(date, hour)
 
 
 
 # ------------------------------------------------
 # Read specrogram
 
-time_series_file = spectrogram_folder / f'test_PRIDE_spectrogram_{date.strftime('%Y%m%d')}.nc'
+time_series_file = spectrograms_folder / f'test_PRIDE_spectrogram_{date.strftime('%Y%m%d')}.nc'
 with xr.open_dataset(time_series_file, decode_cf=False) as timeseries_dataset :
     spectro_dict = {}
     spectro_dict['time'] = np.array(timeseries_dataset['time'])
@@ -42,7 +42,7 @@ for key in spectro_dict.keys() :
 # ------------------------------------------------
 # Read magnetometer data
 
-magnetometer_file = magnetometer_folder / f'image_{date.strftime('%Y%m%d')}.txt'
+magnetometer_file = magnetometers_folder / f'image_{date.strftime('%Y%m%d')}.txt'
 with open(magnetometer_file, 'r') as file:
     magneto_dict = {'time':[],
                     'Bx':[],
@@ -112,7 +112,7 @@ plt.xlabel("Frequency (Hz)")
 plt.ylabel("Amplitude")
 plt.legend()
 plt.grid(True)
-plt.xlim(0, 0.01)
-plt.ylim(0, 3)
+plt.xlim(0, 0.002)
+plt.ylim(0, 8)
 plt.title(f'{date.strftime('%Y/%m/%d')}')
 plt.show()

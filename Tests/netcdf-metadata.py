@@ -33,9 +33,9 @@ import datetime as dt
 # Read config for testing
 config = configparser.ConfigParser()
 config.read("config.ini")
-data_path = Path(config['visual_tool_settings']['raw_data_folder'])
-str_date = config['visual_tool_settings']['date']
-destination_path = Path(config['visual_tool_settings']['netcdf_folder'])
+raw_data_folder = Path(config['directories']['raw_data_folder'])
+publishables_folder = Path(config['directories']['publishables_folder'])
+str_date = config['settings']['start_date']
 
 parser = argparse.ArgumentParser(description="File converter hdf5 to netcdf with metadata")
 parser.add_argument("-d", "--date", default=str_date)
@@ -49,7 +49,7 @@ target_date = dt.datetime.strptime(str_date, '%Y/%m/%d').date()
 # Import data of the RX signal
 
 # Create a list of filepaths corresponding to all the data created during a given day
-day_data_path = data_path / target_date.strftime('%Y/%m/%d')
+day_data_path = raw_data_folder / target_date.strftime('%Y/%m/%d')
 files_list = list(day_data_path.glob('*-nogaps.hdf5'))
 
 # Ceating a dictionnary for centralizing the data
@@ -269,7 +269,7 @@ prideds.attrs = {
 #-----------------------------------------------
 # Export to CF-NetCDF
 
-outfile = destination_path / f'test_PRIDE_{target_date.strftime('%Y%m%d')}.nc'
+outfile = publishables_folder / f'test_PRIDE_{target_date.strftime('%Y%m%d')}.nc'
 
 # Specifiy encoding
 myencoding = {
