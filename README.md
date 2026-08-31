@@ -13,3 +13,17 @@ The receiver uses a custom RF front-end and an USRP N200 with an LFRX daughterbo
 ## Software
 
 The development of the software is work in progress... The platform is a linux computer (Ubuntu LTS 18.04.4) where mainly the python API for [USRP Hardware Driver (UHD)](https://github.com/EttusResearch/uhd) is used.
+
+## GUI
+
+To simplify data processing and visualisation, it is possible to use the visual tool created for this purpose, both on Windows and Linux. This GUI allows for converting the raw hourly hdf5 files into publishable netcdf files, which can in turn be converted into spectrogram files. These spectrogram files contain all the data that can be plotted and analysed. 
+
+To start the script, open a console and execute:
+```bash
+cd Tests
+python visual_tool.py
+```
+
+The converter window requires the directories and the dates to be provided for starting the conversion scripts (_metadata\_netcdf.py_ and _spectrogram\_netcdf.py_). Please note that these scripts need to be located in the same directory as the _visual\_tool.py_ script. The _config.ini_ file also needs to be located in this directory; all the setting changes are recorded in this file.
+
+The plotter window also takes the directories and date into account. Using the scrollbar on the bottom or the mouse wheel on the plot, the x-axis can be reduced to a one-hour time window and dynamically adjusted to inspect an event more precisely. To go back to a 24h window, one has to generate the plot again. The date of the plot can be adjusted using the buttons or manual change; a vertical zoom can also be applied by changing the frequency range; to apply the changes on these parameters, it is necessary to generate the plot again.
