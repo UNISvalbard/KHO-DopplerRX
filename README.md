@@ -20,7 +20,7 @@ To simplify data processing and visualisation, it is possible to use the visual 
 
 To start the script, open a console and execute:
 ```bash
-cd Tests
+cd GUI
 python visual_tool.py
 ```
 
